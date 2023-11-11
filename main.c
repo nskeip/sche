@@ -40,6 +40,7 @@ TokenizerResult tokenize(const char *s) {
     if (isspace(c)) {
       if (c == '\n') {
         ++line_i;
+        char_i = 0;
       }
       continue;
     } else if (isdigit(c)) {
@@ -48,6 +49,7 @@ TokenizerResult tokenize(const char *s) {
       sign = 1;
       while (isdigit(*(s + 1))) {
         ++s;
+        ++char_i;
       }
     } else if (c == '(' || c == ')') {
       result.tokens[token_count].type = Paren;
