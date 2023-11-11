@@ -12,15 +12,13 @@ typedef struct {
   } value;
 } Token;
 
-typedef enum { UnknownIdentifier, ZeroDivisionError } ErrorType;
+typedef enum { UnknownIdentifier } TokenizerError;
 
-void reportError(ErrorType et, unsigned int line_no, unsigned int char_no) {
-  switch (et) {
+void reportTokenizerError(TokenizerError e, unsigned int line_no,
+                          unsigned int char_no) {
+  switch (e) {
   case UnknownIdentifier:
     printf("Unknown identifier at line %d, char %d", line_no, char_no);
-    break;
-  case ZeroDivisionError:
-    printf("Hey! Do not divide by zero at line %d, char %d", line_no, char_no);
     break;
   default:
     puts("Unknown error");
@@ -31,7 +29,7 @@ void reportError(ErrorType et, unsigned int line_no, unsigned int char_no) {
 typedef struct {
   bool ok;
   union {
-    ErrorType error_type;
+    TokenizerError error;
     Token token;
   };
 } Result;
