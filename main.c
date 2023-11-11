@@ -19,6 +19,7 @@ typedef struct {
 
 typedef struct {
   bool ok;
+  size_t tokens_n;
   union {
     Token tokens[MAX_TOKENS];
     struct {
@@ -30,9 +31,10 @@ typedef struct {
 
 TokenizerResult tokenize(const char *s) {
   TokenizerResult result = {.ok = true, .tokens = {0}};
+  size_t token_count = 0;
   size_t line_i = 0;
-  for (size_t token_count = 0, char_i = 0;
-       *s != '\0' && token_count < MAX_TOKENS; ++s, ++char_i) {
+  for (size_t char_i = 0; *s != '\0' && token_count < MAX_TOKENS;
+       ++s, ++char_i) {
     char c = *s;
     if (isspace(c)) {
       if (c == '\n') {
@@ -59,6 +61,7 @@ TokenizerResult tokenize(const char *s) {
 
     ++token_count;
   }
+  result.tokens_n = token_count;
   return result;
 }
 
@@ -66,6 +69,7 @@ int main(void) {
   {
     TokenizerResult tr = tokenize("(+ 1 20)");
     assert(tr.ok);
+    assert(tr.tokens_n == 5);
 
     assert(tr.tokens[0].type == Paren);
     assert(tr.tokens[0].value.c == '(');
