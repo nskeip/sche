@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -30,12 +31,17 @@ typedef struct {
   bool ok;
   union {
     TokenizerError error;
-    Token token;
+    Token *tokens;
   };
-} Result;
+} TokenizerResult;
 
-#define MAX_TOKENS 1000
+TokenizerResult tokenize(const char *s) {
+  TokenizerResult result = {.ok = false, .error = UnknownIdentifier};
+  return result;
+}
 
-Token tokens[MAX_TOKENS] = {0};
-
-int main(void) { return EXIT_SUCCESS; }
+int main(void) {
+  TokenizerResult tr = tokenize("(+ 1 2)");
+  assert(tr.error == UnknownIdentifier);
+  return EXIT_SUCCESS;
+}
