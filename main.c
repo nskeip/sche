@@ -5,12 +5,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-typedef enum { Number, Op, Paren } TokenType;
+typedef enum { Number, Name, ParenOpen, ParenClose } TokenType;
+
+typedef struct {
+  size_t chars_n;
+  char *arr;
+} CharBuff;
 
 typedef struct {
   TokenType type;
   union {
-    char c;
+    CharBuff s;
     int i;
   } value;
 } Token;
@@ -29,7 +34,7 @@ typedef struct {
   };
 } TokenizerResult;
 
-TokenizerResult tokenize(const char *s) {
+TokenizerResult tokenize(char *s) {
   TokenizerResult result = {.ok = true, .tokens = {{0}}};
   size_t token_count = 0;
   size_t line_no = 0;
@@ -51,15 +56,17 @@ TokenizerResult tokenize(const char *s) {
         ++s;
         ++char_no;
       }
-    } else if (c == '(' || c == ')') {
-      result.tokens[token_count].type = Paren;
-      result.tokens[token_count].value.c = c;
+    } else if (c == '(') {
+      result.tokens[token_count].type = ParenOpen;
+    } else if (c == ')') {
+      result.tokens[token_count].type = ParenClose;
     } else if (c == '-' && isdigit(*(s + 1))) {
       sign = -1;
       continue;
     } else if (c == '+' || c == '-' || c == '*' || c == '/') {
-      result.tokens[token_count].type = Op;
-      result.tokens[token_count].value.c = c;
+      result.tokens[token_count].type = Name;
+      result.tokens[token_count].value.s.chars_n = 1;
+      result.tokens[token_count].value.s.arr = s;
     } else {
       TokenizerResult err_result = {
           .ok = false, .line_no = line_no, .char_no = char_no};
@@ -71,11 +78,6 @@ TokenizerResult tokenize(const char *s) {
   result.tokens_n = token_count;
   return result;
 }
-
-typedef struct {
-  size_t chars_n;
-  char *arr;
-} CharBuff;
 
 typedef enum { Literal, Call } ExpressionType;
 
@@ -101,11 +103,11 @@ int main(void) {
     assert(tr.ok);
     assert(tr.tokens_n == 5);
 
-    assert(tr.tokens[0].type == Paren);
-    assert(tr.tokens[0].value.c == '(');
+    assert(tr.tokens[0].type == ParenOpen);
 
-    assert(tr.tokens[1].type == Op);
-    assert(tr.tokens[1].value.c == '+');
+    assert(tr.tokens[1].type == Name);
+    assert(tr.tokens[1].value.s.chars_n == 1);
+    assert(*tr.tokens[1].value.s.arr == '+');
 
     assert(tr.tokens[2].type == Number);
     assert(tr.tokens[2].value.i == -1);
@@ -113,8 +115,7 @@ int main(void) {
     assert(tr.tokens[3].type == Number);
     assert(tr.tokens[3].value.i == 20);
 
-    assert(tr.tokens[4].type == Paren);
-    assert(tr.tokens[4].value.c == ')');
+    assert(tr.tokens[4].type == ParenClose);
   }
   return EXIT_SUCCESS;
 }
