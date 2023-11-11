@@ -38,7 +38,10 @@ typedef struct {
 } TokenizerResult;
 
 TokenizerResult tokenize(const char *s) {
-  TokenizerResult result = {.ok = false, .error = UnknownIdentifier};
+  TokenizerResult result;
+  for (size_t i = 0; *s != '\0' && i < MAX_TOKENS; ++s, ++i) {
+    printf("%zu) %c\n", i, *s);
+  }
   return result;
 }
 
