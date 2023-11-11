@@ -14,20 +14,13 @@ typedef struct {
 
 typedef enum { UnknownIdentifier, ZeroDivisionError } ErrorType;
 
-typedef struct {
-  ErrorType errorType;
-  unsigned int lineNo;
-  unsigned int charNo;
-} Error;
-
-void reportError(Error e) {
-  switch (e.errorType) {
+void reportError(ErrorType et, unsigned int lineNo, unsigned int charNo) {
+  switch (et) {
   case UnknownIdentifier:
-    printf("Unknown identifier at line %d, char %d", e.lineNo, e.charNo);
+    printf("Unknown identifier at line %d, char %d", lineNo, charNo);
     break;
   case ZeroDivisionError:
-    printf("Hey! Do not divide by zero at line %d, char %d", e.lineNo,
-           e.charNo);
+    printf("Hey! Do not divide by zero at line %d, char %d", lineNo, charNo);
     break;
   default:
     puts("Unknown error");
@@ -38,7 +31,7 @@ void reportError(Error e) {
 typedef struct {
   bool ok;
   union {
-    Error error;
+    ErrorType errorType;
     Token token;
   };
 } Result;
