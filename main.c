@@ -40,8 +40,4 @@ typedef struct {
 
 Token tokens[MAX_TOKENS] = {0};
 
-int main(void) {
-  tokens[0] = (Token){.type = Number, .value = 123};
-  printf("%d\n", tokens[0].value.i);
-  return EXIT_SUCCESS;
-}
+int main(void) { return EXIT_SUCCESS; }
