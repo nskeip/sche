@@ -32,15 +32,15 @@ typedef struct {
 TokenizerResult tokenize(const char *s) {
   TokenizerResult result = {.ok = true, .tokens = {{0}}};
   size_t token_count = 0;
-  size_t line_i = 0;
+  size_t line_no = 0;
   int sign = 1;
-  for (size_t char_i = 0; *s != '\0' && token_count < MAX_TOKENS;
-       ++s, ++char_i) {
+  for (size_t char_no = 0; *s != '\0' && token_count < MAX_TOKENS;
+       ++s, ++char_no) {
     char c = *s;
     if (isspace(c)) {
       if (c == '\n') {
-        ++line_i;
-        char_i = 0;
+        ++line_no;
+        char_no = 0;
       }
       continue;
     } else if (isdigit(c)) {
@@ -49,7 +49,7 @@ TokenizerResult tokenize(const char *s) {
       sign = 1;
       while (isdigit(*(s + 1))) {
         ++s;
-        ++char_i;
+        ++char_no;
       }
     } else if (c == '(' || c == ')') {
       result.tokens[token_count].type = Paren;
@@ -62,7 +62,7 @@ TokenizerResult tokenize(const char *s) {
       result.tokens[token_count].value.c = c;
     } else {
       TokenizerResult err_result = {
-          .ok = false, .line_no = line_i, .char_no = char_i};
+          .ok = false, .line_no = line_no, .char_no = char_no};
       return err_result;
     }
 
