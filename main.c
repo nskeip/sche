@@ -30,8 +30,8 @@ void reportTokenizerError(TokenizerError e, unsigned int line_no,
 typedef struct {
   bool ok;
   union {
-    TokenizerError error;
     Token *tokens;
+    TokenizerError error;
   };
 } TokenizerResult;
 
