@@ -30,7 +30,7 @@ typedef struct {
 } TokenizerResult;
 
 TokenizerResult tokenize(const char *s) {
-  TokenizerResult result = {.ok = true, .tokens = {0}};
+  TokenizerResult result = {.ok = true, .tokens = {{0}}};
   size_t token_count = 0;
   size_t line_i = 0;
   int sign = 1;
