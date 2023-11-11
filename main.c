@@ -33,6 +33,7 @@ TokenizerResult tokenize(const char *s) {
   TokenizerResult result = {.ok = true, .tokens = {0}};
   size_t token_count = 0;
   size_t line_i = 0;
+  int sign = 1;
   for (size_t char_i = 0; *s != '\0' && token_count < MAX_TOKENS;
        ++s, ++char_i) {
     char c = *s;
@@ -43,13 +44,17 @@ TokenizerResult tokenize(const char *s) {
       continue;
     } else if (isdigit(c)) {
       result.tokens[token_count].type = Number;
-      result.tokens[token_count].value.i = atoi(s);
+      result.tokens[token_count].value.i = sign * atoi(s);
+      sign = 1;
       while (isdigit(*(s + 1))) {
         ++s;
       }
     } else if (c == '(' || c == ')') {
       result.tokens[token_count].type = Paren;
       result.tokens[token_count].value.c = c;
+    } else if (c == '-' && isdigit(*(s + 1))) {
+      sign = -1;
+      continue;
     } else if (c == '+' || c == '-' || c == '*' || c == '/') {
       result.tokens[token_count].type = Op;
       result.tokens[token_count].value.c = c;
@@ -67,7 +72,7 @@ TokenizerResult tokenize(const char *s) {
 
 int main(void) {
   {
-    TokenizerResult tr = tokenize("(+ 1 20)");
+    TokenizerResult tr = tokenize("(+ -1 20)");
     assert(tr.ok);
     assert(tr.tokens_n == 5);
 
@@ -78,7 +83,7 @@ int main(void) {
     assert(tr.tokens[1].value.c == '+');
 
     assert(tr.tokens[2].type == Number);
-    assert(tr.tokens[2].value.i == 1);
+    assert(tr.tokens[2].value.i == -1);
 
     assert(tr.tokens[3].type == Number);
     assert(tr.tokens[3].value.i == 20);
