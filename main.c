@@ -117,5 +117,11 @@ int main(void) {
 
     assert(tr.tokens[4].type == ParenClose);
   }
+  {
+    TokenizerResult tr = tokenize("99c");
+    assert(!tr.ok);
+    assert(tr.line_no == 0);
+    assert(tr.char_no == 2);
+  }
   return EXIT_SUCCESS;
 }
