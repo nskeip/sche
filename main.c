@@ -13,28 +13,11 @@ typedef struct {
   } value;
 } Token;
 
-typedef enum { UnknownIdentifier } TokenizerError;
-
-void reportTokenizerError(TokenizerError e, unsigned int line_no,
-                          unsigned int char_no) {
-  switch (e) {
-  case UnknownIdentifier:
-    printf("Unknown identifier at line %d, char %d", line_no, char_no);
-    break;
-  default:
-    puts("Unknown error");
-    break;
-  }
-}
-
 #define MAX_TOKENS 1024
 
 typedef struct {
   bool ok;
-  union {
-    Token tokens[MAX_TOKENS];
-    TokenizerError error;
-  };
+  Token tokens[MAX_TOKENS];
 } TokenizerResult;
 
 TokenizerResult tokenize(const char *s) {
@@ -47,6 +30,6 @@ TokenizerResult tokenize(const char *s) {
 
 int main(void) {
   TokenizerResult tr = tokenize("(+ 1 2)");
-  assert(tr.error == UnknownIdentifier);
+  assert(tr.ok);
   return EXIT_SUCCESS;
 }
