@@ -70,6 +70,29 @@ TokenizerResult tokenize(const char *s) {
   return result;
 }
 
+typedef struct {
+  size_t chars_n;
+  char *arr;
+} CharBuff;
+
+typedef enum { Literal, Call } ExpressionType;
+
+typedef struct {
+  ExpressionType type;
+  union {
+    int i;
+    struct {
+      CharBuff name;
+      struct Expression **params;
+    } f_call;
+  } value;
+} Expression;
+
+Expression parse(size_t tokens_n, Token tokens[]) {
+  Expression result = {.type = Literal, .value.i = 269};
+  return result;
+}
+
 int main(void) {
   {
     TokenizerResult tr = tokenize("(+ -1 20)");
