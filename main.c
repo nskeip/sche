@@ -38,6 +38,7 @@ TokenizerResult tokenize(const char *s) {
       if (c == '\n') {
         ++line_i;
       }
+      continue;
     } else if (isdigit(c)) {
       result.tokens[token_count].type = Number;
       result.tokens[token_count].value.i = atoi(s);
