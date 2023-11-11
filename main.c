@@ -27,10 +27,12 @@ void reportTokenizerError(TokenizerError e, unsigned int line_no,
   }
 }
 
+#define MAX_TOKENS 1024
+
 typedef struct {
   bool ok;
   union {
-    Token *tokens;
+    Token tokens[MAX_TOKENS];
     TokenizerError error;
   };
 } TokenizerResult;
