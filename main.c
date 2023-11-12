@@ -90,10 +90,6 @@ TokenizerResult tokenize(char *s) {
       if (!_is_correct_right_limiter_of_name_or_number(*(s + 1))) {
         return mk_error_token_result(line_no, char_no);
       }
-    } else if (c == '(') {
-      result.tokens[token_count].type = ParenOpen;
-    } else if (c == ')') {
-      result.tokens[token_count].type = ParenClose;
     } else if (c == '-' && isdigit(*(s + 1))) {
       sign = -1;
       continue;
@@ -101,6 +97,10 @@ TokenizerResult tokenize(char *s) {
       result.tokens[token_count].type = Name;
       result.tokens[token_count].value.s.chars_n = 1;
       result.tokens[token_count].value.s.arr = s;
+    } else if (c == '(') {
+      result.tokens[token_count].type = ParenOpen;
+    } else if (c == ')') {
+      result.tokens[token_count].type = ParenClose;
     } else {
       return mk_error_token_result(line_no, char_no);
     }
@@ -125,7 +125,9 @@ typedef struct {
 } Expression;
 
 Expression parse(size_t tokens_n, Token tokens[]) {
-  Expression result = {.type = Literal, .value.i = 269};
+  Expression result;
+  for (size_t i = 0; i < tokens_n; ++i) {
+  }
   return result;
 }
 
