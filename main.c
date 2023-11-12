@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-typedef enum { Number, Name, ParenOpen, ParenClose } TokenType;
+typedef enum { Number, Symbol, ParenOpen, ParenClose } TokenType;
 
 typedef struct {
   size_t chars_n;
@@ -83,7 +83,7 @@ TokenizerResult tokenize(char *s) {
     } else if (c == ')') {
       result.tokens[token_count].type = ParenClose;
     } else {
-      result.tokens[token_count].type = Name;
+      result.tokens[token_count].type = Symbol;
 
       char *position_of_name_beginning = s;
       result.tokens[token_count].value.s.arr = position_of_name_beginning;
@@ -129,7 +129,7 @@ int main(void) {
 
     assert(tr.tokens[0].type == ParenOpen);
 
-    assert(tr.tokens[1].type == Name);
+    assert(tr.tokens[1].type == Symbol);
     assert(tr.tokens[1].value.s.chars_n == 1);
     assert(*tr.tokens[1].value.s.arr == '+');
 
@@ -152,11 +152,11 @@ int main(void) {
     assert(tr.ok);
     assert(tr.tokens_n == 2);
 
-    assert(tr.tokens[0].type == Name);
+    assert(tr.tokens[0].type == Symbol);
     assert(tr.tokens[0].value.s.chars_n == 4);
     assert(strncmp(tr.tokens[0].value.s.arr, "e2e4", 4) == 0);
 
-    assert(tr.tokens[1].type == Name);
+    assert(tr.tokens[1].type == Symbol);
     assert(tr.tokens[1].value.s.chars_n == 3);
     assert(strncmp(tr.tokens[1].value.s.arr, "abc", 3) == 0);
   }
