@@ -87,10 +87,6 @@ TokenizerResult tokenize(char *s) {
     } else if (c == '-' && isdigit(*(s + 1))) {
       sign = -1;
       continue;
-    } else if (_is_one_of(c, "+-*/%'<>=?")) {
-      result.tokens[token_count].type = Name;
-      result.tokens[token_count].value.s.chars_n = 1;
-      result.tokens[token_count].value.s.arr = s;
     } else if (c == '(') {
       result.tokens[token_count].type = ParenOpen;
     } else if (c == ')') {
