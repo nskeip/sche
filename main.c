@@ -10,7 +10,7 @@ typedef enum { Number, Symbol, ParenOpen, ParenClose } TokenType;
 
 typedef struct {
   size_t chars_n;
-  char *arr;
+  const char *arr;
 } CharBuff;
 
 typedef struct {
