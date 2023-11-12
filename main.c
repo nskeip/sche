@@ -84,21 +84,6 @@ TokenizerResult tokenize(char *s) {
       if (!_is_valid_right_limiter_of_name_or_number(*(s + 1))) {
         return mk_error_token_result(line_no, char_no);
       }
-    } else if (isalpha(c)) {
-      result.tokens[token_count].type = Name;
-
-      char *position_where_alpha_found = s;
-      result.tokens[token_count].value.s.arr = position_where_alpha_found;
-      while (isalnum(*(s + 1)) || *(s + 1) == '_') {
-        ++s;
-        ++char_no;
-      }
-      result.tokens[token_count].value.s.chars_n =
-          s - position_where_alpha_found + 1;
-
-      if (!_is_valid_right_limiter_of_name_or_number(*(s + 1))) {
-        return mk_error_token_result(line_no, char_no);
-      }
     } else if (c == '-' && isdigit(*(s + 1))) {
       sign = -1;
       continue;
@@ -111,7 +96,16 @@ TokenizerResult tokenize(char *s) {
     } else if (c == ')') {
       result.tokens[token_count].type = ParenClose;
     } else {
-      return mk_error_token_result(line_no, char_no);
+      result.tokens[token_count].type = Name;
+
+      char *position_of_name_beginning = s;
+      result.tokens[token_count].value.s.arr = position_of_name_beginning;
+      while (!_is_valid_right_limiter_of_name_or_number(*(s + 1))) {
+        ++s;
+        ++char_no;
+      }
+      result.tokens[token_count].value.s.chars_n =
+          s - position_of_name_beginning + 1;
     }
 
     ++token_count;
@@ -178,6 +172,15 @@ int main(void) {
     assert(tr.tokens[1].type == Name);
     assert(tr.tokens[1].value.s.chars_n == 3);
     assert(strncmp(tr.tokens[1].value.s.arr, "abc", 3) == 0);
+  }
+  {
+    assert(tokenize("").ok);
+    assert(tokenize("my-variable").ok);
+    assert(tokenize("*special*").ok);
+    assert(tokenize("+special+").ok);
+    assert(tokenize("/divide/").ok);
+    assert(tokenize("=eq=").ok);
+    assert(tokenize("variable_with_underscore").ok);
   }
   return EXIT_SUCCESS;
 }
