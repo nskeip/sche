@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 typedef enum { Number, Name, ParenOpen, ParenClose } TokenType;
 
@@ -34,6 +35,18 @@ typedef struct {
   };
 } TokenizerResult;
 
+static TokenizerResult mk_error_token_result(size_t line_no, size_t char_no) {
+  TokenizerResult err_result = {
+      .ok = false, .line_no = line_no, .char_no = char_no};
+  return err_result;
+}
+
+static bool _is_correct_right_limiter_of_name_or_number(char c) {
+  // if `c` is the next right of some number or a name, it means
+  // that the parsing of the number or name should be finished
+  return c == '\0' || c == '(' || c == ')' || isspace(c);
+}
+
 TokenizerResult tokenize(char *s) {
   TokenizerResult result = {.ok = true, .tokens = {{0}}};
   size_t token_count = 0;
@@ -56,6 +69,24 @@ TokenizerResult tokenize(char *s) {
         ++s;
         ++char_no;
       }
+      if (!_is_correct_right_limiter_of_name_or_number(*(s + 1))) {
+        return mk_error_token_result(line_no, char_no);
+      }
+    } else if (isalpha(c)) {
+      result.tokens[token_count].type = Name;
+
+      char *position_where_alpha_found = s;
+      result.tokens[token_count].value.s.arr = position_where_alpha_found;
+      while (isalnum(*(s + 1)) || *(s + 1) == '_') {
+        ++s;
+        ++char_no;
+      }
+      result.tokens[token_count].value.s.chars_n =
+          s - position_where_alpha_found + 1;
+
+      if (!_is_correct_right_limiter_of_name_or_number(*(s + 1))) {
+        return mk_error_token_result(line_no, char_no);
+      }
     } else if (c == '(') {
       result.tokens[token_count].type = ParenOpen;
     } else if (c == ')') {
@@ -68,9 +99,7 @@ TokenizerResult tokenize(char *s) {
       result.tokens[token_count].value.s.chars_n = 1;
       result.tokens[token_count].value.s.arr = s;
     } else {
-      TokenizerResult err_result = {
-          .ok = false, .line_no = line_no, .char_no = char_no};
-      return err_result;
+      return mk_error_token_result(line_no, char_no);
     }
 
     ++token_count;
@@ -121,7 +150,20 @@ int main(void) {
     TokenizerResult tr = tokenize("99c");
     assert(!tr.ok);
     assert(tr.line_no == 0);
-    assert(tr.char_no == 2);
+    assert(tr.char_no == 1);
+  }
+  {
+    TokenizerResult tr = tokenize("e2e4 abc");
+    assert(tr.ok);
+    assert(tr.tokens_n == 2);
+
+    assert(tr.tokens[0].type == Name);
+    assert(tr.tokens[0].value.s.chars_n == 4);
+    assert(strncmp(tr.tokens[0].value.s.arr, "e2e4", 4) == 0);
+
+    assert(tr.tokens[1].type == Name);
+    assert(tr.tokens[1].value.s.chars_n == 3);
+    assert(strncmp(tr.tokens[1].value.s.arr, "abc", 3) == 0);
   }
   return EXIT_SUCCESS;
 }
