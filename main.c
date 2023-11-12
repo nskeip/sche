@@ -47,6 +47,15 @@ static bool _is_correct_right_limiter_of_name_or_number(char c) {
   return c == '\0' || c == '(' || c == ')' || isspace(c);
 }
 
+static bool _is_one_of(char c, const char *variants) {
+  for (const char *v = variants; *v != '\0'; ++v) {
+    if (c == *v) {
+      return true;
+    }
+  }
+  return false;
+}
+
 TokenizerResult tokenize(char *s) {
   TokenizerResult result = {.ok = true, .tokens = {{0}}};
   size_t token_count = 0;
@@ -93,7 +102,7 @@ TokenizerResult tokenize(char *s) {
     } else if (c == '-' && isdigit(*(s + 1))) {
       sign = -1;
       continue;
-    } else if (c == '+' || c == '-' || c == '*' || c == '/') {
+    } else if (_is_one_of(c, "+-*/")) {
       result.tokens[token_count].type = Name;
       result.tokens[token_count].value.s.chars_n = 1;
       result.tokens[token_count].value.s.arr = s;
