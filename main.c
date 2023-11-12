@@ -41,7 +41,7 @@ static TokenizerResult mk_error_token_result(size_t line_no, size_t char_no) {
   return err_result;
 }
 
-static bool _is_valid_right_limiter_of_name_or_number(char c) {
+static bool is_valid_right_limiter_of_name_or_number(char c) {
   // if `c` is the next right of some number or a name, it means
   // that the parsing of the number or name should be finished
   return c == '\0' || c == '(' || c == ')' || isspace(c);
@@ -72,7 +72,7 @@ TokenizerResult tokenize(char *s) {
         ++s;
         ++char_no;
       }
-      if (!_is_valid_right_limiter_of_name_or_number(*(s + 1))) {
+      if (!is_valid_right_limiter_of_name_or_number(*(s + 1))) {
         return mk_error_token_result(line_no, char_no);
       }
     } else if (c == '-' && isdigit(*(s + 1))) {
@@ -87,7 +87,7 @@ TokenizerResult tokenize(char *s) {
 
       char *position_of_name_beginning = s;
       result.tokens[token_count].value.s.arr = position_of_name_beginning;
-      while (!_is_valid_right_limiter_of_name_or_number(*(s + 1))) {
+      while (!is_valid_right_limiter_of_name_or_number(*(s + 1))) {
         ++s;
         ++char_no;
       }
