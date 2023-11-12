@@ -103,7 +103,7 @@ TokenizerResult tokenize(char *s) {
 
 typedef enum { Literal, Call } ExpressionType;
 
-typedef struct {
+typedef struct Expression {
   ExpressionType type;
   union {
     int i;
