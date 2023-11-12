@@ -47,15 +47,6 @@ static bool _is_valid_right_limiter_of_name_or_number(char c) {
   return c == '\0' || c == '(' || c == ')' || isspace(c);
 }
 
-static bool _is_one_of(char c, const char *variants) {
-  for (const char *v = variants; *v != '\0'; ++v) {
-    if (c == *v) {
-      return true;
-    }
-  }
-  return false;
-}
-
 TokenizerResult tokenize(char *s) {
   TokenizerResult result = {.ok = true, .tokens = {{0}}};
   size_t token_count = 0;
