@@ -109,6 +109,7 @@ typedef struct Expression {
     int i;
     struct {
       CharBuff name;
+      size_t params_n;
       struct Expression **params;
     } f_call;
   } value;
