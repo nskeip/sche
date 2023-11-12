@@ -1,7 +1,7 @@
 #include <stddef.h>
 
 typedef struct {
-  char *const memory;
+  char *const memory_start;
   char *ptr;
   const size_t bytes_total;
 } Arena;

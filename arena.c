@@ -3,14 +3,14 @@
 
 Arena ArenaAlloc(size_t bytes_total) {
   char *memory = malloc(bytes_total);
-  Arena a = {.memory = memory, .ptr = memory, .bytes_total = bytes_total};
+  Arena a = {.memory_start = memory, .ptr = memory, .bytes_total = bytes_total};
   return a;
 }
 
-void ArenaRelease(Arena *arena) { free(arena->memory); }
+void ArenaRelease(Arena *arena) { free(arena->memory_start); }
 
 static size_t bytes_left_in(Arena *arena) {
-  return arena->bytes_total - (arena->ptr - arena->memory);
+  return arena->bytes_total - (arena->ptr - arena->memory_start);
 }
 
 void *ArenaPush(Arena *arena, size_t size) {
@@ -23,7 +23,7 @@ void *ArenaPush(Arena *arena, size_t size) {
 }
 
 void ArenaPop(Arena *arena, size_t size) {
-  if (arena->ptr - arena->memory > size) {
+  if (arena->ptr - arena->memory_start > size) {
     arena->ptr -= size;
   }
 }
