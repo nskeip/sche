@@ -52,8 +52,11 @@ TokenizerResult tokenize(char *s) {
   size_t token_count = 0;
   size_t line_no = 0;
   int sign = 1;
-  for (size_t char_no = 0; *s != '\0' && token_count < MAX_TOKENS;
-       ++s, ++char_no) {
+  for (size_t char_no = 0; *s != '\0'; ++s, ++char_no) {
+    if (token_count == MAX_TOKENS) {
+      fprintf(stderr, "Too many tokens to parse, sorry");
+      mk_error_token_result(line_no, char_no);
+    }
     char c = *s;
     if (isspace(c)) {
       if (c == '\n') {
