@@ -2,7 +2,7 @@
 #include <stdlib.h>
 
 Arena ArenaAlloc(size_t bytes_total) {
-  char *memory = malloc(bytes_total);
+  char *memory = calloc(bytes_total, sizeof(char));
   Arena a = {.memory_start = memory, .ptr = memory, .bytes_total = bytes_total};
   return a;
 }
