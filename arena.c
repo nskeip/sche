@@ -24,7 +24,7 @@ static void x2_arena_memory(Arena *arena) {
   arena->bytes_total = new_bytes_total;
 }
 
-void *arena_push(Arena *arena, size_t size) {
+void *arena_push_dyn(Arena *arena, size_t size) {
   while (bytes_left_in(arena) < size) {
     x2_arena_memory(arena);
   }
