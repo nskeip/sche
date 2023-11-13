@@ -1,5 +1,5 @@
 # Default compiler
-COMPILER ?= gcc
+COMPILER ?= clang
 
 # Compilation flags
 CFLAGS = -Wall -Wextra -g
