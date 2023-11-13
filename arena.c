@@ -28,7 +28,6 @@ void *arena_push(Arena *arena, size_t size) {
   while (bytes_left_in(arena) < size) {
     x2_arena_memory(arena);
   }
-  assert(arena->bytes_total > arena->current_byte_n);
   void *result = arena->memory_start + arena->current_byte_n;
   arena->current_byte_n += size;
   return result;
