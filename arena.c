@@ -1,4 +1,5 @@
 #include "arena.h"
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -24,7 +25,8 @@ void *ArenaPush(Arena *arena, size_t size) {
 }
 
 void ArenaPop(Arena *arena, size_t size) {
-  if (arena->ptr - arena->memory_start > size) {
+  assert(arena->ptr >= arena->memory_start);
+  if ((size_t)(arena->ptr - arena->memory_start) > size) {
     arena->ptr -= size;
   }
 }
