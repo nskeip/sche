@@ -1,9 +1,9 @@
 #include <stddef.h>
 
 typedef struct {
-  char *const memory_start;
-  char *ptr;
-  const size_t bytes_total;
+  char *memory_start;
+  size_t current_byte_n;
+  size_t bytes_total;
 } Arena;
 
 // based on

@@ -4,34 +4,39 @@
 #include <string.h>
 
 Arena ArenaAlloc(size_t bytes_total) {
-  char *memory = calloc(bytes_total, sizeof(char));
-  Arena a = {.memory_start = memory, .ptr = memory, .bytes_total = bytes_total};
+  char *memory = malloc(bytes_total);
+  Arena a = {
+      .memory_start = memory, .current_byte_n = 0, .bytes_total = bytes_total};
   return a;
 }
 
 void ArenaRelease(Arena *arena) { free(arena->memory_start); }
 
 static size_t bytes_left_in(Arena *arena) {
-  return arena->bytes_total - (arena->ptr - arena->memory_start);
+  assert(arena->bytes_total > arena->current_byte_n);
+  return arena->bytes_total - arena->current_byte_n;
+}
+
+static void x2_arena_memory(Arena *arena) {
+  const size_t new_bytes_total = 2 * arena->bytes_total;
+  arena->memory_start = realloc(arena->memory_start, new_bytes_total);
+  assert(arena->memory_start != NULL);
+  arena->bytes_total = new_bytes_total;
 }
 
 void *ArenaPush(Arena *arena, size_t size) {
-  if (bytes_left_in(arena) < size) {
-    return NULL;
+  while (bytes_left_in(arena) < size) {
+    x2_arena_memory(arena);
   }
-  void *result = arena->ptr;
-  arena->ptr += size;
+  assert(arena->bytes_total > arena->current_byte_n);
+  void *result = arena->memory_start + arena->current_byte_n;
+  arena->current_byte_n += size;
   return result;
 }
 
 void ArenaPop(Arena *arena, size_t size) {
-  assert(arena->ptr >= arena->memory_start);
-  if ((size_t)(arena->ptr - arena->memory_start) >= size) {
-    arena->ptr -= size;
-  }
+  assert(arena->current_byte_n >= size);
+  arena->current_byte_n -= size;
 }
 
-void ArenaClean(Arena *arena) {
-  arena->ptr = arena->memory_start;
-  memset(arena->memory_start, 0, arena->bytes_total);
-}
+void ArenaClean(Arena *arena) { arena->current_byte_n = 0; }
