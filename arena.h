@@ -15,6 +15,7 @@ Arena ArenaAlloc(size_t size);
 void ArenaRelease(Arena *arena);
 void *ArenaPush(Arena *arena, size_t size);
 void ArenaPop(Arena *arena, size_t size);
+void ArenaClean(Arena *arena);
 
 #define PushArray(arena, type, count)                                          \
   (type *)ArenaPush((arena), sizeof(type) * (count))

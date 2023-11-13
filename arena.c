@@ -1,5 +1,6 @@
 #include "arena.h"
 #include <stdlib.h>
+#include <string.h>
 
 Arena ArenaAlloc(size_t bytes_total) {
   char *memory = calloc(bytes_total, sizeof(char));
@@ -26,4 +27,9 @@ void ArenaPop(Arena *arena, size_t size) {
   if (arena->ptr - arena->memory_start > size) {
     arena->ptr -= size;
   }
+}
+
+void ArenaClean(Arena *arena) {
+  arena->ptr = arena->memory_start;
+  memset(arena->memory_start, 0, arena->bytes_total);
 }
