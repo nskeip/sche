@@ -168,6 +168,7 @@ int main(void) {
   {
     TokenizerResult tr = tokenize("99c");
     assert(!tr.ok);
+    assert(tr.error.type == SymbolWithDigitsInBeginning);
     assert(tr.error.line_no == 0);
     assert(tr.error.char_no == 1);
   }
