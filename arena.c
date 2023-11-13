@@ -24,11 +24,15 @@ static void x2_arena_memory(Arena *arena) {
   arena->bytes_total = new_bytes_total;
 }
 
+void *arena_peek(Arena *arena) {
+  return arena->memory_start + arena->current_byte_n;
+}
+
 void *arena_push_dyn(Arena *arena, size_t size) {
   while (bytes_left_in(arena) < size) {
     x2_arena_memory(arena);
   }
-  void *result = arena->memory_start + arena->current_byte_n;
+  void *result = arena_peek(arena);
   arena->current_byte_n += size;
   return result;
 }
