@@ -1,7 +1,28 @@
-scheme-exe: main.c
-	gcc -std=c11 -Wall -Wextra -o scheme-exe ./main.c
+# Default compiler
+COMPILER ?= gcc
 
-.PHONY: debug
-debug:
-	gcc -g -std=c11 -Wall -Wextra -o scheme-exe ./main.c
-	gdb scheme-exe
+# Compilation flags
+CFLAGS = -Wall -Wextra -g
+
+# Source files
+SRC_FILES = main.c arena.c
+
+# Object files
+OBJ_FILES = $(SRC_FILES:.c=.o)
+
+# Output executable
+EXECUTABLE = scheme-exe
+
+# Targets
+all: $(EXECUTABLE)
+
+$(EXECUTABLE): $(OBJ_FILES)
+	$(COMPILER) $(CFLAGS) $^ -o $@
+
+%.o: %.c
+	$(COMPILER) $(CFLAGS) -c $< -o $@
+
+clean:
+	rm -f $(OBJ_FILES) $(EXECUTABLE)
+
+.PHONY: all clean
