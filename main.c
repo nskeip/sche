@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "arena.h"
+
 typedef enum { Number, Symbol, ParenOpen, ParenClose } TokenType;
 
 typedef struct {
@@ -21,15 +23,13 @@ typedef struct {
   } value;
 } Token;
 
-#define MAX_TOKENS 1024
-
 typedef enum { TooManyTokens, SymbolWithDigitsInBeginning } TokenizerErrorType;
 
 typedef struct {
   bool ok;
   size_t tokens_n;
   union {
-    Token tokens[MAX_TOKENS];
+    Token *tokens;
     struct {
       TokenizerErrorType type;
       size_t line_no;
@@ -53,15 +53,19 @@ static bool is_valid_right_limiter_of_name_or_number(char c) {
   return c == '\0' || c == '(' || c == ')' || isspace(c);
 }
 
+static Arena my_arena;
+static void *my_allocate(size_t size) {
+  return arena_push_dyn(&my_arena, size);
+}
+
+static Token *allocate_token() { return my_allocate(sizeof(Token)); }
+
 TokenizerResult tokenize(char *s) {
-  TokenizerResult result = {.ok = true, .tokens = {{0}}};
   size_t token_count = 0;
   size_t line_no = 0;
   int sign = 1;
+  TokenizerResult result = {.ok = true, .tokens = arena_peek(&my_arena)};
   for (size_t char_no = 0; *s != '\0'; ++s, ++char_no) {
-    if (token_count == MAX_TOKENS) {
-      return mk_error_token_result(TooManyTokens, line_no, char_no);
-    }
     char c = *s;
     if (isspace(c)) {
       if (c == '\n') {
@@ -69,9 +73,16 @@ TokenizerResult tokenize(char *s) {
         char_no = 0;
       }
       continue;
-    } else if (isdigit(c)) {
-      result.tokens[token_count].type = Number;
-      result.tokens[token_count].value.i = sign * atoi(s);
+    } else if (c == '-' && isdigit(*(s + 1))) {
+      sign = -1;
+      continue;
+    }
+
+    Token *new_token = allocate_token();
+    token_count++;
+    if (isdigit(c)) {
+      new_token->type = Number;
+      new_token->value.i = sign * atoi(s);
       sign = 1;
       while (isdigit(*(s + 1))) {
         ++s;
@@ -81,27 +92,21 @@ TokenizerResult tokenize(char *s) {
         return mk_error_token_result(SymbolWithDigitsInBeginning, line_no,
                                      char_no);
       }
-    } else if (c == '-' && isdigit(*(s + 1))) {
-      sign = -1;
-      continue;
     } else if (c == '(') {
-      result.tokens[token_count].type = ParenOpen;
+      new_token->type = ParenOpen;
     } else if (c == ')') {
-      result.tokens[token_count].type = ParenClose;
+      new_token->type = ParenClose;
     } else {
-      result.tokens[token_count].type = Symbol;
+      new_token->type = Symbol;
 
       char *position_of_name_beginning = s;
-      result.tokens[token_count].value.s.arr = position_of_name_beginning;
+      new_token->value.s.arr = position_of_name_beginning;
       while (!is_valid_right_limiter_of_name_or_number(*(s + 1))) {
         ++s;
         ++char_no;
       }
-      result.tokens[token_count].value.s.chars_n =
-          s - position_of_name_beginning + 1;
+      new_token->value.s.chars_n = s - position_of_name_beginning + 1;
     }
-
-    ++token_count;
   }
   result.tokens_n = token_count;
   return result;
@@ -129,22 +134,17 @@ Expression parse(size_t tokens_n, Token tokens[]) {
 }
 
 int main(void) {
+  my_arena = arena_alloc(1024);
   {
-    const size_t test_size = MAX_TOKENS;
+    const size_t test_size = 2048;
+
     char many_tokens[test_size];
-    memset(many_tokens, '(', test_size);
+    memset(many_tokens, '(', test_size - 1);
+    many_tokens[test_size - 1] = '\0';
+
     TokenizerResult tr = tokenize(many_tokens);
     assert(tr.ok);
-    assert(tr.tokens_n == MAX_TOKENS);
-  }
-  {
-    const size_t test_size = MAX_TOKENS + 1;
-    char too_many_tokens[test_size];
-    memset(too_many_tokens, '(', test_size);
-    TokenizerResult tr = tokenize(too_many_tokens);
-    assert(!tr.ok);
-    assert(tr.error.type == TooManyTokens);
-    assert(tr.error.char_no == MAX_TOKENS);
+    assert(tr.tokens_n == 2047);
   }
   {
     TokenizerResult tr = tokenize("(+ -1 20)");
