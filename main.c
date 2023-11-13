@@ -194,5 +194,6 @@ int main(void) {
     assert(tokenize("=eq=").ok);
     assert(tokenize("variable_with_underscore").ok);
   }
+  arena_release(&my_arena);
   return EXIT_SUCCESS;
 }
