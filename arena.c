@@ -26,7 +26,7 @@ void *ArenaPush(Arena *arena, size_t size) {
 
 void ArenaPop(Arena *arena, size_t size) {
   assert(arena->ptr >= arena->memory_start);
-  if ((size_t)(arena->ptr - arena->memory_start) > size) {
+  if ((size_t)(arena->ptr - arena->memory_start) >= size) {
     arena->ptr -= size;
   }
 }
