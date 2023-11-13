@@ -13,7 +13,7 @@ Arena arena_alloc(size_t bytes_total) {
 void arena_release(Arena *arena) { free(arena->memory_start); }
 
 static size_t bytes_left_in(Arena *arena) {
-  assert(arena->bytes_total > arena->current_byte_n);
+  assert(arena->bytes_total >= arena->current_byte_n);
   return arena->bytes_total - arena->current_byte_n;
 }
 
