@@ -55,7 +55,7 @@ TokenizerResult tokenize(char *s) {
   for (size_t char_no = 0; *s != '\0'; ++s, ++char_no) {
     if (token_count == MAX_TOKENS) {
       fprintf(stderr, "Too many tokens to parse, sorry");
-      mk_error_token_result(line_no, char_no);
+      return mk_error_token_result(line_no, char_no);
     }
     char c = *s;
     if (isspace(c)) {
@@ -123,6 +123,22 @@ Expression parse(size_t tokens_n, Token tokens[]) {
 }
 
 int main(void) {
+  {
+    const size_t test_size = MAX_TOKENS;
+    char many_tokens[test_size];
+    memset(many_tokens, '(', test_size);
+    TokenizerResult tr = tokenize(many_tokens);
+    assert(tr.ok);
+    assert(tr.tokens_n == MAX_TOKENS);
+  }
+  {
+    const size_t test_size = MAX_TOKENS + 1;
+    char too_many_tokens[test_size];
+    memset(too_many_tokens, '(', test_size);
+    TokenizerResult tr = tokenize(too_many_tokens);
+    assert(!tr.ok);
+    assert(tr.char_no == MAX_TOKENS);
+  }
   {
     TokenizerResult tr = tokenize("(+ -1 20)");
     assert(tr.ok);
