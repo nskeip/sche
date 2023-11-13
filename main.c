@@ -23,21 +23,27 @@ typedef struct {
 
 #define MAX_TOKENS 1024
 
+typedef enum { TooManyTokens, SymbolWithDigitsInBeginning } TokenizerErrorType;
+
 typedef struct {
   bool ok;
   size_t tokens_n;
   union {
     Token tokens[MAX_TOKENS];
     struct {
+      TokenizerErrorType type;
       size_t line_no;
       size_t char_no;
-    };
+    } error;
   };
 } TokenizerResult;
 
-static TokenizerResult mk_error_token_result(size_t line_no, size_t char_no) {
-  TokenizerResult err_result = {
-      .ok = false, .line_no = line_no, .char_no = char_no};
+static TokenizerResult mk_error_token_result(TokenizerErrorType type,
+                                             size_t line_no, size_t char_no) {
+  TokenizerResult err_result = {.ok = false,
+                                .error.type = type,
+                                .error.line_no = line_no,
+                                .error.char_no = char_no};
   return err_result;
 }
 
@@ -54,8 +60,7 @@ TokenizerResult tokenize(char *s) {
   int sign = 1;
   for (size_t char_no = 0; *s != '\0'; ++s, ++char_no) {
     if (token_count == MAX_TOKENS) {
-      fprintf(stderr, "Too many tokens to parse, sorry");
-      return mk_error_token_result(line_no, char_no);
+      return mk_error_token_result(TooManyTokens, line_no, char_no);
     }
     char c = *s;
     if (isspace(c)) {
@@ -73,7 +78,8 @@ TokenizerResult tokenize(char *s) {
         ++char_no;
       }
       if (!is_valid_right_limiter_of_name_or_number(*(s + 1))) {
-        return mk_error_token_result(line_no, char_no);
+        return mk_error_token_result(SymbolWithDigitsInBeginning, line_no,
+                                     char_no);
       }
     } else if (c == '-' && isdigit(*(s + 1))) {
       sign = -1;
@@ -137,7 +143,8 @@ int main(void) {
     memset(too_many_tokens, '(', test_size);
     TokenizerResult tr = tokenize(too_many_tokens);
     assert(!tr.ok);
-    assert(tr.char_no == MAX_TOKENS);
+    assert(tr.error.type == TooManyTokens);
+    assert(tr.error.char_no == MAX_TOKENS);
   }
   {
     TokenizerResult tr = tokenize("(+ -1 20)");
@@ -161,8 +168,8 @@ int main(void) {
   {
     TokenizerResult tr = tokenize("99c");
     assert(!tr.ok);
-    assert(tr.line_no == 0);
-    assert(tr.char_no == 1);
+    assert(tr.error.line_no == 0);
+    assert(tr.error.char_no == 1);
   }
   {
     TokenizerResult tr = tokenize("e2e4 abc");
