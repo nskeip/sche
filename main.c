@@ -112,26 +112,26 @@ TokenizerResult tokenize(char *s) {
   return result;
 }
 
-typedef enum { Literal, Call } ExpressionType;
-
-typedef struct Expression {
-  ExpressionType type;
-  union {
-    int i;
-    struct {
-      CharBuff name;
-      size_t params_n;
-      struct Expression **params;
-    } f_call;
-  } value;
-} Expression;
-
-Expression parse(size_t tokens_n, Token tokens[]) {
-  Expression result;
-  for (size_t i = 0; i < tokens_n; ++i) {
-  }
-  return result;
-}
+// typedef enum { Literal, Call } ExpressionType;
+//
+// typedef struct Expression {
+//   ExpressionType type;
+//   union {
+//     int i;
+//     struct {
+//       CharBuff name;
+//       size_t params_n;
+//       struct Expression **params;
+//     } f_call;
+//   } value;
+// } Expression;
+//
+// Expression parse(size_t tokens_n, Token tokens[]) {
+//   Expression result;
+//   for (size_t i = 0; i < tokens_n; ++i) {
+//   }
+//   return result;
+// }
 
 int main(void) {
   my_arena = arena_alloc(1024);
