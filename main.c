@@ -8,7 +8,7 @@
 
 #include "arena.h"
 
-typedef enum { Number, Symbol, ParenOpen, ParenClose } TokenType;
+typedef enum { Number, Name, ParenOpen, ParenClose } TokenType;
 
 typedef struct {
   size_t chars_n;
@@ -23,7 +23,7 @@ typedef struct {
   } value;
 } Token;
 
-typedef enum { TooManyTokens, SymbolWithDigitsInBeginning } TokenizerErrorType;
+typedef enum { TooManyTokens, NameWithDigitsInBeginning } TokenizerErrorType;
 
 typedef struct {
   bool ok;
@@ -89,7 +89,7 @@ TokenizerResult tokenize(char *s) {
         ++char_no;
       }
       if (!is_valid_right_limiter_of_name_or_number(*(s + 1))) {
-        return mk_error_token_result(SymbolWithDigitsInBeginning, line_no,
+        return mk_error_token_result(NameWithDigitsInBeginning, line_no,
                                      char_no);
       }
     } else if (c == '(') {
@@ -97,7 +97,7 @@ TokenizerResult tokenize(char *s) {
     } else if (c == ')') {
       new_token->type = ParenClose;
     } else {
-      new_token->type = Symbol;
+      new_token->type = Name;
 
       char *position_of_name_beginning = s;
       new_token->value.s.arr = position_of_name_beginning;
@@ -153,7 +153,7 @@ int main(void) {
 
     assert(tr.tokens[0].type == ParenOpen);
 
-    assert(tr.tokens[1].type == Symbol);
+    assert(tr.tokens[1].type == Name);
     assert(tr.tokens[1].value.s.chars_n == 1);
     assert(*tr.tokens[1].value.s.arr == '+');
 
@@ -168,7 +168,7 @@ int main(void) {
   {
     TokenizerResult tr = tokenize("99c");
     assert(!tr.ok);
-    assert(tr.error.type == SymbolWithDigitsInBeginning);
+    assert(tr.error.type == NameWithDigitsInBeginning);
     assert(tr.error.line_no == 0);
     assert(tr.error.char_no == 1);
   }
@@ -177,11 +177,11 @@ int main(void) {
     assert(tr.ok);
     assert(tr.tokens_n == 2);
 
-    assert(tr.tokens[0].type == Symbol);
+    assert(tr.tokens[0].type == Name);
     assert(tr.tokens[0].value.s.chars_n == 4);
     assert(strncmp(tr.tokens[0].value.s.arr, "e2e4", 4) == 0);
 
-    assert(tr.tokens[1].type == Symbol);
+    assert(tr.tokens[1].type == Name);
     assert(tr.tokens[1].value.s.chars_n == 3);
     assert(strncmp(tr.tokens[1].value.s.arr, "abc", 3) == 0);
   }
