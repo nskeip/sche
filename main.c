@@ -64,7 +64,7 @@ TokenizerResult tokenize(char *s) {
   size_t token_count = 0;
   size_t line_no = 0;
   int sign = 1;
-  TokenizerResult result = {.ok = true, .tokens = arena_peek(&my_arena)};
+  TokenizerResult result = {.ok = true, .tokens = NULL};
   for (size_t char_no = 0; *s != '\0'; ++s, ++char_no) {
     char c = *s;
     if (isspace(c)) {
@@ -79,6 +79,9 @@ TokenizerResult tokenize(char *s) {
     }
 
     Token *new_token = allocate_token();
+    if (result.tokens == NULL) {
+      result.tokens = new_token;
+    }
     token_count++;
     if (isdigit(c)) {
       new_token->type = Number;
