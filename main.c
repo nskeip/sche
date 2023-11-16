@@ -57,6 +57,7 @@ static Arena my_arena;
 static void *my_allocate(size_t size) {
   return arena_push_dyn(&my_arena, size);
 }
+static void my_deallocate() { arena_release(&my_arena); }
 
 static Token *allocate_token() { return my_allocate(sizeof(Token)); }
 
@@ -197,6 +198,6 @@ int main(void) {
     assert(tokenize("=eq=").ok);
     assert(tokenize("variable_with_underscore").ok);
   }
-  arena_release(&my_arena);
+  my_deallocate();
   return EXIT_SUCCESS;
 }
