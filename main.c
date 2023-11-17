@@ -8,7 +8,12 @@
 
 #include "arena.h"
 
-typedef enum { Number, Name, ParenOpen, ParenClose } TokenType;
+typedef enum {
+  NumberToken,
+  NameToken,
+  ParenOpenToken,
+  ParenCloseToken
+} TokenType;
 
 typedef struct {
   size_t chars_n;
@@ -23,7 +28,10 @@ typedef struct {
   } value;
 } Token;
 
-typedef enum { TooManyTokens, NameWithDigitsInBeginning } TokenizerErrorType;
+typedef enum {
+  TooManyTokensTokenizerError,
+  NameWithDigitsInBeginningTokenizerError
+} TokenizerErrorType;
 
 typedef struct {
   bool ok;
@@ -38,8 +46,9 @@ typedef struct {
   };
 } TokenizerResult;
 
-static TokenizerResult mk_error_token_result(TokenizerErrorType type,
-                                             size_t line_no, size_t char_no) {
+static TokenizerResult mk_error_tokenizer_result(TokenizerErrorType type,
+                                                 size_t line_no,
+                                                 size_t char_no) {
   TokenizerResult err_result = {.ok = false,
                                 .error.type = type,
                                 .error.line_no = line_no,
@@ -85,7 +94,7 @@ TokenizerResult tokenize(char *s) {
     }
     token_count++;
     if (isdigit(c)) {
-      new_token->type = Number;
+      new_token->type = NumberToken;
       new_token->value.i = sign * atoi(s);
       sign = 1;
       while (isdigit(*(s + 1))) {
@@ -93,15 +102,15 @@ TokenizerResult tokenize(char *s) {
         ++char_no;
       }
       if (!is_valid_right_limiter_of_name_or_number(*(s + 1))) {
-        return mk_error_token_result(NameWithDigitsInBeginning, line_no,
-                                     char_no);
+        return mk_error_tokenizer_result(
+            NameWithDigitsInBeginningTokenizerError, line_no, char_no);
       }
     } else if (c == '(') {
-      new_token->type = ParenOpen;
+      new_token->type = ParenOpenToken;
     } else if (c == ')') {
-      new_token->type = ParenClose;
+      new_token->type = ParenCloseToken;
     } else {
-      new_token->type = Name;
+      new_token->type = NameToken;
 
       char *position_of_name_beginning = s;
       new_token->value.s.arr = position_of_name_beginning;
@@ -155,24 +164,24 @@ int main(void) {
     assert(tr.ok);
     assert(tr.tokens_n == 5);
 
-    assert(tr.tokens_sequence[0].type == ParenOpen);
+    assert(tr.tokens_sequence[0].type == ParenOpenToken);
 
-    assert(tr.tokens_sequence[1].type == Name);
+    assert(tr.tokens_sequence[1].type == NameToken);
     assert(tr.tokens_sequence[1].value.s.chars_n == 1);
     assert(*tr.tokens_sequence[1].value.s.arr == '+');
 
-    assert(tr.tokens_sequence[2].type == Number);
+    assert(tr.tokens_sequence[2].type == NumberToken);
     assert(tr.tokens_sequence[2].value.i == -1);
 
-    assert(tr.tokens_sequence[3].type == Number);
+    assert(tr.tokens_sequence[3].type == NumberToken);
     assert(tr.tokens_sequence[3].value.i == 20);
 
-    assert(tr.tokens_sequence[4].type == ParenClose);
+    assert(tr.tokens_sequence[4].type == ParenCloseToken);
   }
   {
     TokenizerResult tr = tokenize("99c");
     assert(!tr.ok);
-    assert(tr.error.type == NameWithDigitsInBeginning);
+    assert(tr.error.type == NameWithDigitsInBeginningTokenizerError);
     assert(tr.error.line_no == 0);
     assert(tr.error.char_no == 1);
   }
@@ -181,11 +190,11 @@ int main(void) {
     assert(tr.ok);
     assert(tr.tokens_n == 2);
 
-    assert(tr.tokens_sequence[0].type == Name);
+    assert(tr.tokens_sequence[0].type == NameToken);
     assert(tr.tokens_sequence[0].value.s.chars_n == 4);
     assert(strncmp(tr.tokens_sequence[0].value.s.arr, "e2e4", 4) == 0);
 
-    assert(tr.tokens_sequence[1].type == Name);
+    assert(tr.tokens_sequence[1].type == NameToken);
     assert(tr.tokens_sequence[1].value.s.chars_n == 3);
     assert(strncmp(tr.tokens_sequence[1].value.s.arr, "abc", 3) == 0);
   }
