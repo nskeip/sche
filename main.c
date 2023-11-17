@@ -29,7 +29,7 @@ typedef struct {
   bool ok;
   size_t tokens_n;
   union {
-    Token *tokens;
+    Token *tokens_sequence;
     struct {
       TokenizerErrorType type;
       size_t line_no;
@@ -65,7 +65,7 @@ TokenizerResult tokenize(char *s) {
   size_t token_count = 0;
   size_t line_no = 0;
   int sign = 1;
-  TokenizerResult result = {.ok = true, .tokens = NULL};
+  TokenizerResult result = {.ok = true, .tokens_sequence = NULL};
   for (size_t char_no = 0; *s != '\0'; ++s, ++char_no) {
     char c = *s;
     if (isspace(c)) {
@@ -80,8 +80,8 @@ TokenizerResult tokenize(char *s) {
     }
 
     Token *new_token = allocate_token();
-    if (result.tokens == NULL) {
-      result.tokens = new_token;
+    if (result.tokens_sequence == NULL) {
+      result.tokens_sequence = new_token;
     }
     token_count++;
     if (isdigit(c)) {
@@ -155,19 +155,19 @@ int main(void) {
     assert(tr.ok);
     assert(tr.tokens_n == 5);
 
-    assert(tr.tokens[0].type == ParenOpen);
+    assert(tr.tokens_sequence[0].type == ParenOpen);
 
-    assert(tr.tokens[1].type == Name);
-    assert(tr.tokens[1].value.s.chars_n == 1);
-    assert(*tr.tokens[1].value.s.arr == '+');
+    assert(tr.tokens_sequence[1].type == Name);
+    assert(tr.tokens_sequence[1].value.s.chars_n == 1);
+    assert(*tr.tokens_sequence[1].value.s.arr == '+');
 
-    assert(tr.tokens[2].type == Number);
-    assert(tr.tokens[2].value.i == -1);
+    assert(tr.tokens_sequence[2].type == Number);
+    assert(tr.tokens_sequence[2].value.i == -1);
 
-    assert(tr.tokens[3].type == Number);
-    assert(tr.tokens[3].value.i == 20);
+    assert(tr.tokens_sequence[3].type == Number);
+    assert(tr.tokens_sequence[3].value.i == 20);
 
-    assert(tr.tokens[4].type == ParenClose);
+    assert(tr.tokens_sequence[4].type == ParenClose);
   }
   {
     TokenizerResult tr = tokenize("99c");
@@ -181,13 +181,13 @@ int main(void) {
     assert(tr.ok);
     assert(tr.tokens_n == 2);
 
-    assert(tr.tokens[0].type == Name);
-    assert(tr.tokens[0].value.s.chars_n == 4);
-    assert(strncmp(tr.tokens[0].value.s.arr, "e2e4", 4) == 0);
+    assert(tr.tokens_sequence[0].type == Name);
+    assert(tr.tokens_sequence[0].value.s.chars_n == 4);
+    assert(strncmp(tr.tokens_sequence[0].value.s.arr, "e2e4", 4) == 0);
 
-    assert(tr.tokens[1].type == Name);
-    assert(tr.tokens[1].value.s.chars_n == 3);
-    assert(strncmp(tr.tokens[1].value.s.arr, "abc", 3) == 0);
+    assert(tr.tokens_sequence[1].type == Name);
+    assert(tr.tokens_sequence[1].value.s.chars_n == 3);
+    assert(strncmp(tr.tokens_sequence[1].value.s.arr, "abc", 3) == 0);
   }
   {
     assert(tokenize("").ok);
