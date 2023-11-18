@@ -19,7 +19,9 @@ static size_t bytes_left_in(Arena *arena) {
 
 static void x2_arena_memory(Arena *arena) {
   const size_t new_bytes_total = 2 * arena->bytes_total;
-  arena->memory_start = realloc(arena->memory_start, new_bytes_total);
+  arena->memory_start =
+      realloc(arena->memory_start,
+              new_bytes_total); // BUG: users' pointers will not find data
   assert(arena->memory_start != NULL);
   arena->bytes_total = new_bytes_total;
 }
