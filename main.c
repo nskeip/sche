@@ -125,26 +125,71 @@ TokenizerResult tokenize(char *s) {
   return result;
 }
 
-// typedef enum { Literal, Call } ExpressionType;
-//
-// typedef struct Expression {
-//   ExpressionType type;
-//   union {
-//     int i;
-//     struct {
-//       CharBuff name;
-//       size_t params_n;
-//       struct Expression **params;
-//     } f_call;
-//   } value;
-// } Expression;
-//
-// Expression parse(size_t tokens_n, Token tokens[]) {
-//   Expression result;
-//   for (size_t i = 0; i < tokens_n; ++i) {
-//   }
-//   return result;
-// }
+typedef enum { NamedExpressionType, IntExpressionType } ExpressionType;
+
+typedef struct ExpressionsList {
+  struct {
+    ExpressionType value_type;
+    union {
+      int i;
+      CharBuff s;
+    };
+  } head;
+  struct ExpressionsList *tail;
+} ExpressionsList;
+
+typedef enum {
+  TooShortExpressionParseError,
+  CheckParentesisParseError
+} ParserErrorType;
+
+typedef struct {
+  bool ok;
+  union {
+    ExpressionsList values_list;
+    ParserErrorType error_type;
+  };
+} ParserResult;
+
+static ParserResult
+mk_error_expression_parsing_result(ParserErrorType error_type) {
+  ParserResult r = {.ok = false, .error_type = error_type};
+  return r;
+}
+
+ParserResult parse(size_t tokens_n, Token tokens[]) {
+  if (tokens_n > 0 && (tokens[0].type != ParenOpenToken ||
+                       tokens[tokens_n - 1].type != ParenCloseToken)) {
+    return mk_error_expression_parsing_result(CheckParentesisParseError);
+  }
+  if (tokens_n < 3) {
+    return mk_error_expression_parsing_result(TooShortExpressionParseError);
+  }
+  ParserResult result = {.ok = true};
+  ExpressionsList *current_values_list = &result.values_list;
+  const size_t idx_of_closing_par = tokens_n - 1;
+  for (size_t i = 1; i < idx_of_closing_par; ++i) {
+    switch (tokens[i].type) {
+    case NumberToken:
+      current_values_list->head.value_type = IntExpressionType;
+      current_values_list->head.i = tokens[i].value.i;
+      break;
+    case NameToken:
+      current_values_list->head.value_type = NamedExpressionType;
+      current_values_list->head.s = tokens[i].value.s;
+      break;
+    case ParenOpenToken:
+    case ParenCloseToken:
+      assert(false);
+    }
+    if (i != idx_of_closing_par - 1) {
+      current_values_list->tail = my_allocate(sizeof(ExpressionsList));
+      current_values_list->tail->tail = NULL;
+      current_values_list = current_values_list->tail;
+    }
+  }
+  return result;
+}
 
 int main(void) {
   my_arena = arena_alloc(1024);
@@ -206,6 +251,35 @@ int main(void) {
     assert(tokenize("/divide/").ok);
     assert(tokenize("=eq=").ok);
     assert(tokenize("variable_with_underscore").ok);
+  }
+  {
+    TokenizerResult tr = tokenize("");
+    assert(tr.ok);
+    assert(tr.tokens_n == 0);
+    assert(!parse(tr.tokens_n, tr.tokens_sequence).ok);
+  }
+  {
+    TokenizerResult tr = tokenize("()");
+    assert(tr.ok);
+    assert(tr.tokens_n == 2);
+    assert(!parse(tr.tokens_n, tr.tokens_sequence).ok);
+  }
+  {
+    TokenizerResult tr = tokenize("(+ 1 2)");
+    assert(tr.ok);
+
+    ParserResult pr = parse(tr.tokens_n, tr.tokens_sequence);
+    assert(pr.ok);
+    assert(pr.values_list.head.value_type == NamedExpressionType);
+    assert(pr.values_list.head.s.chars_n == 1);
+    assert(strncmp(pr.values_list.head.s.arr, "+", 1) == 0);
+
+    assert(pr.values_list.tail->head.value_type == IntExpressionType);
+    assert(pr.values_list.tail->head.i == 1);
+
+    assert(pr.values_list.tail->tail->head.value_type == IntExpressionType);
+    assert(pr.values_list.tail->tail->head.i == 2);
+    assert(pr.values_list.tail->tail->tail == NULL);
   }
   my_release();
   return EXIT_SUCCESS;
