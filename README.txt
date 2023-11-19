@@ -16,3 +16,11 @@ __   __   _        _                _   _
  | || | | | ||  __/ |  | |_) | | |  __/ ||  __/ |   
 |___|_| |_|\__\___|_|  | .__/|_|  \___|\__\___|_|   
                        |_|                          
+
+Roadmap:
+
+[x] Write a simple parser (without nesting).
+[ ] Fix the bug that invalidates pointers in Area. Rename it to DynamicArea.
+[ ] Add nesting to the parser.
+[ ] Make a usable calculator.
+[ ] ...
