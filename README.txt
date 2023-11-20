@@ -20,7 +20,7 @@ __   __   _        _                _   _
 Roadmap:
 
 [x] Write a simple parser (without nesting).
-[x] Fix the bug that invalidates pointers in Arena. Introduced ChainArena.
+[x] Fix the bug that invalidates pointers in Arena. Introduce ChainArena.
 [ ] Add nesting to the parser.
 [ ] Make a usable calculator.
 [ ] ...
