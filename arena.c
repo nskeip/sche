@@ -3,14 +3,18 @@
 #include <stdlib.h>
 #include <string.h>
 
-Arena arena_init(size_t bytes_total) {
-  char *memory = malloc(bytes_total);
-  Arena a = {
-      .memory_start = memory, .current_byte_n = 0, .bytes_total = bytes_total};
+Arena *arena_init(size_t bytes_total) {
+  Arena *a = malloc(sizeof(Arena));
+  a->memory_start = malloc(bytes_total);
+  a->current_byte_n = 0;
+  a->bytes_total = bytes_total;
   return a;
 }
 
-void arena_release(Arena *arena) { free(arena->memory_start); }
+void arena_release(Arena *arena) {
+  free(arena->memory_start);
+  free(arena);
+}
 
 void *arena_push(Arena *arena, size_t size) {
   assert(arena->bytes_total >= arena->current_byte_n);

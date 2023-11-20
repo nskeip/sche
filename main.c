@@ -62,9 +62,9 @@ static bool is_valid_right_limiter_of_name_or_number(char c) {
   return c == '\0' || c == '(' || c == ')' || isspace(c);
 }
 
-static Arena my_arena;
-static void *my_allocate(size_t size) { return arena_push(&my_arena, size); }
-static void my_release() { arena_release(&my_arena); }
+static Arena *my_arena;
+static void *my_allocate(size_t size) { return arena_push(my_arena, size); }
+static void my_release() { arena_release(my_arena); }
 
 TokenizerResult tokenize(char *s) {
   size_t token_count = 0;
