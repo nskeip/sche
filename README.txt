@@ -20,7 +20,7 @@ __   __   _        _                _   _
 Roadmap:
 
 [x] Write a simple parser (without nesting).
-[ ] Fix the bug that invalidates pointers in Area. Rename it to DynamicArea.
+[x] Fix the bug that invalidates pointers in Arena. Introduced ChainArena.
 [ ] Add nesting to the parser.
 [ ] Make a usable calculator.
 [ ] ...

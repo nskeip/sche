@@ -12,7 +12,12 @@ Arena *arena_init(size_t bytes_total) {
 }
 
 void arena_release(Arena *arena) {
-  free(arena->memory_start);
+  if (arena == NULL) {
+    return;
+  }
+  if (arena->memory_start != NULL) {
+    free(arena->memory_start);
+  }
   free(arena);
 }
 
