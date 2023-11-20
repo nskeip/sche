@@ -188,7 +188,7 @@ ParserResult parse(size_t tokens_n, Token tokens[]) {
 }
 
 int main(void) {
-  my_arena = arena_alloc(1024);
+  my_arena = arena_init(1024);
   // {
   //   const size_t test_size = 2048;
   //

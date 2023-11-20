@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-Arena arena_alloc(size_t bytes_total) {
+Arena arena_init(size_t bytes_total) {
   char *memory = malloc(bytes_total);
   Arena a = {
       .memory_start = memory, .current_byte_n = 0, .bytes_total = bytes_total};

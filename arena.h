@@ -11,6 +11,6 @@ typedef struct {
 // by Ryan Fleury
 // https://www.rfleury.com/p/untangling-lifetimes-the-arena-allocator
 
-Arena arena_alloc(size_t size);
+Arena arena_init(size_t size);
 void arena_release(Arena *arena);
 void *arena_push(Arena *arena, size_t size);
