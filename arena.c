@@ -12,36 +12,13 @@ Arena arena_alloc(size_t bytes_total) {
 
 void arena_release(Arena *arena) { free(arena->memory_start); }
 
-static size_t bytes_left_in(Arena *arena) {
+void *arena_push(Arena *arena, size_t size) {
   assert(arena->bytes_total >= arena->current_byte_n);
-  return arena->bytes_total - arena->current_byte_n;
-}
-
-static void x2_arena_memory(Arena *arena) {
-  const size_t new_bytes_total = 2 * arena->bytes_total;
-  arena->memory_start =
-      realloc(arena->memory_start,
-              new_bytes_total); // BUG: users' pointers will not find data
-  assert(arena->memory_start != NULL);
-  arena->bytes_total = new_bytes_total;
-}
-
-void *arena_peek(Arena *arena) {
-  return arena->memory_start + arena->current_byte_n;
-}
-
-void *arena_push_dyn(Arena *arena, size_t size) {
-  while (bytes_left_in(arena) < size) {
-    x2_arena_memory(arena);
+  const size_t bytes_left_in = arena->bytes_total - arena->current_byte_n;
+  while (bytes_left_in < size) {
+    return NULL;
   }
-  void *result = arena_peek(arena);
+  void *peek = arena->memory_start + arena->current_byte_n;
   arena->current_byte_n += size;
-  return result;
+  return peek;
 }
-
-void arena_pop(Arena *arena, size_t size) {
-  assert(arena->current_byte_n >= size);
-  arena->current_byte_n -= size;
-}
-
-void arena_clean(Arena *arena) { arena->current_byte_n = 0; }

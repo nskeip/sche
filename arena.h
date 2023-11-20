@@ -13,7 +13,4 @@ typedef struct {
 
 Arena arena_alloc(size_t size);
 void arena_release(Arena *arena);
-void *arena_peek(Arena *arena);
-void *arena_push_dyn(Arena *arena, size_t size);
-void arena_pop(Arena *arena, size_t size);
-void arena_clean(Arena *arena);
+void *arena_push(Arena *arena, size_t size);
