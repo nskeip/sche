@@ -66,8 +66,6 @@ static Arena my_arena;
 static void *my_allocate(size_t size) { return arena_push(&my_arena, size); }
 static void my_release() { arena_release(&my_arena); }
 
-static Token *allocate_token() { return my_allocate(sizeof(Token)); }
-
 TokenizerResult tokenize(char *s) {
   size_t token_count = 0;
   size_t line_no = 0;
@@ -86,7 +84,7 @@ TokenizerResult tokenize(char *s) {
       continue;
     }
 
-    Token *new_token = allocate_token();
+    Token *new_token = my_allocate(sizeof(Token));
     if (result.tokens_sequence == NULL) {
       result.tokens_sequence = new_token;
     }
