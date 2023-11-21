@@ -1,4 +1,4 @@
-#include "chain_arena.h"
+#include "chained_arena.h"
 #include <assert.h>
 #include <stddef.h>
 #include <stdlib.h>
@@ -10,8 +10,8 @@ static struct ArenaList *arena_list_init(size_t size) {
   return arena_list;
 }
 
-ChainArena *chain_arena_init(size_t default_size) {
-  ChainArena *chain_arena = malloc(sizeof(ChainArena));
+ChainedArena *chained_arena_init(size_t default_size) {
+  ChainedArena *chain_arena = malloc(sizeof(ChainedArena));
   chain_arena->default_size = default_size;
   chain_arena->chain = arena_list_init(default_size);
   return chain_arena;
@@ -26,7 +26,7 @@ static void arena_list_release(struct ArenaList *arena_list) {
   free(arena_list);
 }
 
-void chain_arena_release(ChainArena *chain_arena) {
+void chained_arena_release(ChainedArena *chain_arena) {
   if (chain_arena == NULL) {
     return;
   }
@@ -34,7 +34,7 @@ void chain_arena_release(ChainArena *chain_arena) {
   free(chain_arena);
 }
 
-void *chain_arena_push(ChainArena *chain_arena, size_t size) {
+void *chained_arena_push(ChainedArena *chain_arena, size_t size) {
   void *push_result = arena_push(chain_arena->chain->current, size);
   if (push_result != NULL) {
     return push_result;

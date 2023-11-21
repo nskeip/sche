@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "chain_arena.h"
+#include "chained_arena.h"
 
 typedef enum {
   NumberToken,
@@ -62,11 +62,11 @@ static bool is_valid_right_limiter_of_name_or_number(char c) {
   return c == '\0' || c == '(' || c == ')' || isspace(c);
 }
 
-static ChainArena *my_chain_arena;
+static ChainedArena *my_chain_arena;
 static void *my_allocate(size_t size) {
-  return chain_arena_push(my_chain_arena, size);
+  return chained_arena_push(my_chain_arena, size);
 }
-static void my_release() { chain_arena_release(my_chain_arena); }
+static void my_release() { chained_arena_release(my_chain_arena); }
 
 TokenizerResult tokenize(char *s) {
   size_t token_count = 0;
@@ -190,7 +190,7 @@ ParserResult parse(size_t tokens_n, Token tokens[]) {
 }
 
 int main(void) {
-  my_chain_arena = chain_arena_init(1024);
+  my_chain_arena = chained_arena_init(1024);
   {
     const size_t test_size = 2048;
 
