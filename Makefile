@@ -5,7 +5,7 @@ COMPILER ?= clang
 CFLAGS = -Wall -Wextra -g
 
 # Source files
-SRC_FILES = main.c chained_arena.c arena.c
+SRC_FILES = main.c memory_tracker.c
 
 # Object files
 OBJ_FILES = $(SRC_FILES:.c=.o)

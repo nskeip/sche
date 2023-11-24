@@ -1,3 +1,4 @@
+#include "memory_tracker.h"
 #include <assert.h>
 #include <ctype.h>
 #include <stdbool.h>
@@ -5,8 +6,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include "chained_arena.h"
 
 typedef enum {
   NumberToken,
@@ -62,17 +61,15 @@ static bool is_valid_right_limiter_of_name_or_number(char c) {
   return c == '\0' || c == '(' || c == ')' || isspace(c);
 }
 
-static ChainedArena *my_chain_arena;
-static void *my_allocate(size_t size) {
-  return chained_arena_push(my_chain_arena, size);
-}
-static void my_release() { chained_arena_release(my_chain_arena); }
+static MemoryTracker *mt;
+static void *my_allocate(size_t size) { return memory_tracker_push(mt, size); }
+static void my_release() { memory_tracker_release(mt); }
 
 TokenizerResult tokenize(char *s) {
-  size_t token_count = 0;
   size_t line_no = 0;
   int sign = 1;
-  TokenizerResult result = {.ok = true, .tokens_sequence = NULL};
+  TokenizerResult result = {.ok = true, .tokens_n = 0};
+  MemoryTracker *tmp_tokens = memory_tracker_init(4096);
   for (size_t char_no = 0; *s != '\0'; ++s, ++char_no) {
     char c = *s;
     if (isspace(c)) {
@@ -86,11 +83,9 @@ TokenizerResult tokenize(char *s) {
       continue;
     }
 
-    Token *new_token = my_allocate(sizeof(Token));
-    if (result.tokens_sequence == NULL) {
-      result.tokens_sequence = new_token;
-    }
-    token_count++;
+    Token *new_token = memory_tracker_push(tmp_tokens, sizeof(Token));
+    assert(new_token != NULL);
+    result.tokens_n++;
     if (isdigit(c)) {
       new_token->type = NumberToken;
       new_token->value.i = sign * atoi(s);
@@ -100,6 +95,7 @@ TokenizerResult tokenize(char *s) {
         ++char_no;
       }
       if (!is_valid_right_limiter_of_name_or_number(*(s + 1))) {
+        memory_tracker_release(tmp_tokens);
         return mk_error_tokenizer_result(
             NameWithDigitsInBeginningTokenizerError, line_no, char_no);
       }
@@ -119,7 +115,11 @@ TokenizerResult tokenize(char *s) {
       new_token->value.s.chars_n = s - position_of_name_beginning + 1;
     }
   }
-  result.tokens_n = token_count;
+  result.tokens_sequence = my_allocate(sizeof(Token) * result.tokens_n);
+  for (size_t i = 0; i < result.tokens_n; ++i) {
+    result.tokens_sequence[i] = *((Token *)tmp_tokens->pointers[i]);
+  }
+  memory_tracker_release(tmp_tokens);
   return result;
 }
 
@@ -190,7 +190,7 @@ ParserResult parse(size_t tokens_n, Token tokens[]) {
 }
 
 int main(void) {
-  my_chain_arena = chained_arena_init(1024);
+  mt = memory_tracker_init(1024);
   {
     const size_t test_size = 2048;
 
