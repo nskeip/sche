@@ -189,6 +189,28 @@ ParserResult parse(size_t tokens_n, Token tokens[]) {
   return result;
 }
 
+static int eval_expr_list(ExpressionsList exprs) {
+  assert(exprs.head.value_type == NamedExpressionType);
+  assert(exprs.tail->head.value_type == IntExpressionType);
+  assert(exprs.tail->tail->head.value_type == IntExpressionType);
+  int a = exprs.tail->head.i;
+  int b = exprs.tail->tail->head.i;
+  switch (*exprs.head.s.arr) {
+  case '+':
+    return a + b;
+  case '-':
+    return a - b;
+  case '*':
+    return a * b;
+  case '/':
+    return a / b;
+  case '%':
+    return a % b;
+  default:
+    assert(false);
+  }
+}
+
 int main(void) {
   mt = memory_tracker_init(1024);
   {
@@ -278,6 +300,8 @@ int main(void) {
     assert(pr.values_list.tail->tail->head.value_type == IntExpressionType);
     assert(pr.values_list.tail->tail->head.i == 2);
     assert(pr.values_list.tail->tail->tail == NULL);
+
+    assert(eval_expr_list(pr.values_list) == 3);
   }
   my_release();
   return EXIT_SUCCESS;
