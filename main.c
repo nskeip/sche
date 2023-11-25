@@ -57,7 +57,7 @@ static MemoryTracker *mt;
 static void *my_allocate(size_t size) { return memory_tracker_push(mt, size); }
 static void my_release() { memory_tracker_release(mt); }
 
-TokenizerResult tokenize(char *s) {
+TokenizerResult tokenize(const char *s) {
   size_t line_no = 0;
   int sign = 1;
   TokenizerResult result = {.ok = true, .tokens_n = 0};
@@ -101,7 +101,7 @@ TokenizerResult tokenize(char *s) {
     } else {
       new_token->type = NameToken;
 
-      char *position_of_name_beginning = s;
+      const char *position_of_name_beginning = s;
       new_token->value.s.arr = position_of_name_beginning;
       while (!is_valid_right_limiter_of_name_or_number(*(s + 1))) {
         ++s;
