@@ -234,9 +234,13 @@ EvalResult eval_expr_list(ExpressionsList exprs) {
 
 EvalResult eval(const char *s) {
   TokenizerResult tr = tokenize(s);
-  assert(tr.ok);
+  if (!tr.ok) {
+    return (EvalResult){.status = TokenizationWhileEvalError};
+  }
   ParserResult pr = parse(tr.tokens_n, tr.tokens_sequence);
-  assert(pr.ok);
+  if (!pr.ok) {
+    return (EvalResult){.status = ParsingWhileEvalError};
+  }
   return eval_expr_list(pr.values_list);
 }
 
@@ -395,16 +399,22 @@ int main(int argc, char **argv) {
     }
     case TokenizationWhileEvalError:
       puts("Error tokenizing expression");
+      break;
     case ParsingWhileEvalError:
       puts("Error parsing expression");
+      break;
     case NamedExpressionExpectedEvalError:
       puts("Named expression expected");
+      break;
     case TwoIntegersExpectedEvalError:
       puts("Two integers expected");
+      break;
     case ZeroDivisionEvalError:
       puts("Division by zero! You are a bad person!");
+      break;
     case UndefinedFunctionEvalError:
       puts("Error evaluating expression");
+      break;
     }
     goto error_and_clean_up;
   }
