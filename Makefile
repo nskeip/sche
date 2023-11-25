@@ -25,4 +25,7 @@ $(EXECUTABLE): $(OBJ_FILES)
 clean:
 	rm -f $(OBJ_FILES) $(EXECUTABLE)
 
-.PHONY: all clean
+test: clean $(EXECUTABLE)
+	./$(EXECUTABLE) -t
+
+.PHONY: all clean test

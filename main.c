@@ -210,7 +210,7 @@ EvalResult eval_expr_list(ExpressionsList exprs) {
   return result;
 }
 
-int main(void) {
+void run_tests(void) {
   mt = memory_tracker_init(1024);
   {
     const size_t test_size = 2048;
@@ -305,5 +305,21 @@ int main(void) {
     assert(er.value.i == 3);
   }
   my_release();
+  printf("\x1b[32m"); // green text
+  printf("\u2713 ");  // Unicode check mark
+  printf("\x1b[0m");  // Reset text color to default
+  printf("All tests passed\n");
+}
+
+int main(int argc, char **argv) {
+  if (argc != 2) {
+    puts("Usage:");
+    printf("%15s %15s\n", "-t, --tests", "Run tests");
+    return 1;
+  }
+  if (strcmp(argv[1], "--test") == 0 || strcmp(argv[1], "-t") == 0) {
+    run_tests();
+    return 0;
+  }
   return EXIT_SUCCESS;
 }
