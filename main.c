@@ -176,9 +176,14 @@ ParserResult parse(size_t tokens_n, Token tokens[]) {
   return result;
 }
 
+typedef enum { ZeroDivisionEvalError } EvalErrorType;
+
 typedef struct {
   bool ok;
-  Value value;
+  union {
+    Value value;
+    EvalErrorType error_type;
+  };
 } EvalResult;
 
 EvalResult eval_expr_list(ExpressionsList exprs) {
@@ -204,9 +209,13 @@ EvalResult eval_expr_list(ExpressionsList exprs) {
   case '*':
     result.value.i = a * b;
     break;
-  case '/':
+  case '/': {
+    if (b == 0) {
+      return (EvalResult){.ok = false, .error_type = ZeroDivisionEvalError};
+    }
     result.value.i = a / b;
     break;
+  }
   case '%':
     result.value.i = a % b;
     break;
@@ -376,7 +385,12 @@ int main(int argc, char **argv) {
       printf("%d\n", eval_result.value.i);
       goto success_and_clean_up;
     } else {
-      puts("Error evaluating expression");
+      puts("Error evaluating expression:");
+      switch (eval_result.error_type) {
+      case ZeroDivisionEvalError:
+        puts("Division by zero");
+        break;
+      }
       goto error_and_clean_up;
     }
   }
