@@ -148,19 +148,14 @@ typedef struct {
   };
 } ParserResult;
 
-static ParserResult
-mk_error_expression_parsing_result(ParserErrorType error_type) {
-  ParserResult r = {.ok = false, .error_type = error_type};
-  return r;
-}
-
 ParserResult parse(size_t tokens_n, Token tokens[]) {
   if (tokens_n > 0 && (tokens[0].type != ParenOpenToken ||
                        tokens[tokens_n - 1].type != ParenCloseToken)) {
-    return mk_error_expression_parsing_result(CheckParentesisParseError);
+    return (ParserResult){.ok = false, .error_type = CheckParentesisParseError};
   }
   if (tokens_n < 3) {
-    return mk_error_expression_parsing_result(TooShortExpressionParseError);
+    return (ParserResult){.ok = false,
+                          .error_type = TooShortExpressionParseError};
   }
   ParserResult result = {.ok = true};
   ExpressionsList *current_values_list = &result.values_list;
