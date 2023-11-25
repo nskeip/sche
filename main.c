@@ -188,26 +188,38 @@ ParserResult parse(size_t tokens_n, Token tokens[]) {
   return result;
 }
 
-static int eval_expr_list(ExpressionsList exprs) {
+typedef struct {
+  bool ok;
+  Value value;
+} EvalResult;
+
+EvalResult eval_expr_list(ExpressionsList exprs) {
   assert(exprs.head.value_type == NamedExpressionType);
   assert(exprs.tail->head.value_type == IntExpressionType);
   assert(exprs.tail->tail->head.value_type == IntExpressionType);
   int a = exprs.tail->head.value.i;
   int b = exprs.tail->tail->head.value.i;
+  EvalResult result = {.ok = true};
   switch (*exprs.head.value.s.arr) {
   case '+':
-    return a + b;
+    result.value.i = a + b;
+    break;
   case '-':
-    return a - b;
+    result.value.i = a - b;
+    break;
   case '*':
-    return a * b;
+    result.value.i = a * b;
+    break;
   case '/':
-    return a / b;
+    result.value.i = a / b;
+    break;
   case '%':
-    return a % b;
+    result.value.i = a % b;
+    break;
   default:
-    assert(false);
+    return (EvalResult){.ok = false};
   }
+  return result;
 }
 
 int main(void) {
@@ -300,7 +312,9 @@ int main(void) {
     assert(pr.values_list.tail->tail->head.value.i == 2);
     assert(pr.values_list.tail->tail->tail == NULL);
 
-    assert(eval_expr_list(pr.values_list) == 3);
+    EvalResult er = eval_expr_list(pr.values_list);
+    assert(er.ok);
+    assert(er.value.i == 3);
   }
   my_release();
   return EXIT_SUCCESS;
