@@ -19,12 +19,14 @@ typedef struct {
   const char *arr;
 } CharBuff;
 
+typedef union {
+  CharBuff s;
+  int i;
+} Value;
+
 typedef struct {
   TokenType type;
-  union {
-    CharBuff s;
-    int i;
-  } value;
+  Value value;
 } Token;
 
 typedef enum {
@@ -128,10 +130,7 @@ typedef enum { NamedExpressionType, IntExpressionType } ExpressionType;
 typedef struct ExpressionsList {
   struct {
     ExpressionType value_type;
-    union {
-      int i;
-      CharBuff s;
-    };
+    Value value;
   } head;
   struct ExpressionsList *tail;
 } ExpressionsList;
@@ -170,11 +169,11 @@ ParserResult parse(size_t tokens_n, Token tokens[]) {
     switch (tokens[i].type) {
     case NumberToken:
       current_values_list->head.value_type = IntExpressionType;
-      current_values_list->head.i = tokens[i].value.i;
+      current_values_list->head.value.i = tokens[i].value.i;
       break;
     case NameToken:
       current_values_list->head.value_type = NamedExpressionType;
-      current_values_list->head.s = tokens[i].value.s;
+      current_values_list->head.value.s = tokens[i].value.s;
       break;
     case ParenOpenToken:
     case ParenCloseToken:
@@ -193,9 +192,9 @@ static int eval_expr_list(ExpressionsList exprs) {
   assert(exprs.head.value_type == NamedExpressionType);
   assert(exprs.tail->head.value_type == IntExpressionType);
   assert(exprs.tail->tail->head.value_type == IntExpressionType);
-  int a = exprs.tail->head.i;
-  int b = exprs.tail->tail->head.i;
-  switch (*exprs.head.s.arr) {
+  int a = exprs.tail->head.value.i;
+  int b = exprs.tail->tail->head.value.i;
+  switch (*exprs.head.value.s.arr) {
   case '+':
     return a + b;
   case '-':
@@ -291,14 +290,14 @@ int main(void) {
     ParserResult pr = parse(tr.tokens_n, tr.tokens_sequence);
     assert(pr.ok);
     assert(pr.values_list.head.value_type == NamedExpressionType);
-    assert(pr.values_list.head.s.chars_n == 1);
-    assert(strncmp(pr.values_list.head.s.arr, "+", 1) == 0);
+    assert(pr.values_list.head.value.s.chars_n == 1);
+    assert(strncmp(pr.values_list.head.value.s.arr, "+", 1) == 0);
 
     assert(pr.values_list.tail->head.value_type == IntExpressionType);
-    assert(pr.values_list.tail->head.i == 1);
+    assert(pr.values_list.tail->head.value.i == 1);
 
     assert(pr.values_list.tail->tail->head.value_type == IntExpressionType);
-    assert(pr.values_list.tail->tail->head.i == 2);
+    assert(pr.values_list.tail->tail->head.value.i == 2);
     assert(pr.values_list.tail->tail->tail == NULL);
 
     assert(eval_expr_list(pr.values_list) == 3);
