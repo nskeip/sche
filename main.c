@@ -182,9 +182,15 @@ typedef struct {
 } EvalResult;
 
 EvalResult eval_expr_list(ExpressionsList exprs) {
-  assert(exprs.head.value_type == NamedExpressionType);
-  assert(exprs.tail->head.value_type == IntExpressionType);
-  assert(exprs.tail->tail->head.value_type == IntExpressionType);
+  if (exprs.head.value_type != NamedExpressionType) {
+    fprintf(stderr, "Expected named expression\n");
+    return (EvalResult){.ok = false};
+  }
+  if (exprs.tail->head.value_type != IntExpressionType ||
+      exprs.tail->tail->head.value_type != IntExpressionType) {
+    fprintf(stderr, "Expected two integers\n");
+    return (EvalResult){.ok = false};
+  }
   int a = exprs.tail->head.value.i;
   int b = exprs.tail->tail->head.value.i;
   EvalResult result = {.ok = true};
