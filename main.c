@@ -176,29 +176,36 @@ ParserResult parse(size_t tokens_n, Token tokens[]) {
   return result;
 }
 
-typedef enum { ZeroDivisionEvalError } EvalErrorType;
+typedef enum {
+  SuccessfulEval,
+  TokenizationWhileEvalError,
+  ParsingWhileEvalError,
+  NamedExpressionExpectedEvalError,
+  TwoIntegersExpectedEvalError,
+  ZeroDivisionEvalError,
+  UndefinedFunctionEvalError
+} EvalStatus;
 
 typedef struct {
-  bool ok;
+  EvalStatus status;
   union {
+    TokenizerErrorType tokenizer_error;
+    ParserErrorType parser_error;
     Value value;
-    EvalErrorType error_type;
   };
 } EvalResult;
 
 EvalResult eval_expr_list(ExpressionsList exprs) {
   if (exprs.head.value_type != NamedExpressionType) {
-    fprintf(stderr, "Expected named expression\n");
-    return (EvalResult){.ok = false};
+    return (EvalResult){.status = NamedExpressionExpectedEvalError};
   }
   if (exprs.tail->head.value_type != IntExpressionType ||
       exprs.tail->tail->head.value_type != IntExpressionType) {
-    fprintf(stderr, "Expected two integers\n");
-    return (EvalResult){.ok = false};
+    return (EvalResult){.status = TwoIntegersExpectedEvalError};
   }
   int a = exprs.tail->head.value.i;
   int b = exprs.tail->tail->head.value.i;
-  EvalResult result = {.ok = true};
+  EvalResult result = {.status = SuccessfulEval};
   switch (*exprs.head.value.s.arr) {
   case '+':
     result.value.i = a + b;
@@ -211,7 +218,7 @@ EvalResult eval_expr_list(ExpressionsList exprs) {
     break;
   case '/': {
     if (b == 0) {
-      return (EvalResult){.ok = false, .error_type = ZeroDivisionEvalError};
+      return (EvalResult){.status = ZeroDivisionEvalError};
     }
     result.value.i = a / b;
     break;
@@ -220,7 +227,7 @@ EvalResult eval_expr_list(ExpressionsList exprs) {
     result.value.i = a % b;
     break;
   default:
-    return (EvalResult){.ok = false};
+    return (EvalResult){.status = UndefinedFunctionEvalError};
   }
   return result;
 }
@@ -324,12 +331,12 @@ void run_tests(void) {
     assert(pr.values_list.tail->tail->tail == NULL);
 
     EvalResult er = eval_expr_list(pr.values_list);
-    assert(er.ok);
+    assert(er.status == SuccessfulEval);
     assert(er.value.i == 3);
   }
   {
     EvalResult er = eval("(+ 22 20)");
-    assert(er.ok);
+    assert(er.status == SuccessfulEval);
     assert(er.value.i == 42);
   }
   my_release();
@@ -381,18 +388,25 @@ int main(int argc, char **argv) {
       goto error_and_clean_up;
     }
     EvalResult eval_result = eval(argv[2]);
-    if (eval_result.ok) {
+    switch (eval_result.status) {
+    case SuccessfulEval: {
       printf("%d\n", eval_result.value.i);
       goto success_and_clean_up;
-    } else {
-      puts("Error evaluating expression:");
-      switch (eval_result.error_type) {
-      case ZeroDivisionEvalError:
-        puts("Division by zero");
-        break;
-      }
-      goto error_and_clean_up;
     }
+    case TokenizationWhileEvalError:
+      puts("Error tokenizing expression");
+    case ParsingWhileEvalError:
+      puts("Error parsing expression");
+    case NamedExpressionExpectedEvalError:
+      puts("Named expression expected");
+    case TwoIntegersExpectedEvalError:
+      puts("Two integers expected");
+    case ZeroDivisionEvalError:
+      puts("Division by zero! You are a bad person!");
+    case UndefinedFunctionEvalError:
+      puts("Error evaluating expression");
+    }
+    goto error_and_clean_up;
   }
 success_and_clean_up:
   memory_tracker_release(mt);
