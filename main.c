@@ -356,9 +356,9 @@ int main(int argc, char **argv) {
   }
 success_and_clean_up:
   memory_tracker_release(mt);
-  return 0;
+  return EXIT_SUCCESS;
 
 error_and_clean_up:
   memory_tracker_release(mt);
-  return 1;
+  return EXIT_FAILURE;
 }
