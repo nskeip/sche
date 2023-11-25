@@ -24,4 +24,5 @@ Roadmap:
   [x] Switch from Arena to simple memory tracker (as GNU C Library already has Arenas under the hood).
 [.] Make a usable calculator.
 [ ] Add nesting to the parser.
+[ ] Add n-variable functions.
 [ ] ...
