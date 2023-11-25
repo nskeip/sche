@@ -17,6 +17,11 @@ __   __   _        _                _   _
 |___|_| |_|\__\___|_|  | .__/|_|  \___|\__\___|_|   
                        |_|                          
 
+
+Usage:
+    -t, --tests    Run tests
+        -c expr    Evaluate expression (in quotes)
+
 Roadmap:
 
 [x] Write a simple parser (without nesting).
