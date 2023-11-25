@@ -321,5 +321,5 @@ int main(int argc, char **argv) {
     run_tests();
     return 0;
   }
-  return EXIT_SUCCESS;
+  return 0;
 }
