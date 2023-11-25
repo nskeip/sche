@@ -210,6 +210,14 @@ EvalResult eval_expr_list(ExpressionsList exprs) {
   return result;
 }
 
+EvalResult eval(const char *s) {
+  TokenizerResult tr = tokenize(s);
+  assert(tr.ok);
+  ParserResult pr = parse(tr.tokens_n, tr.tokens_sequence);
+  assert(pr.ok);
+  return eval_expr_list(pr.values_list);
+}
+
 void run_tests(void) {
   mt = memory_tracker_init(1024);
   {
@@ -304,6 +312,11 @@ void run_tests(void) {
     assert(er.ok);
     assert(er.value.i == 3);
   }
+  {
+    EvalResult er = eval("(+ 22 20)");
+    assert(er.ok);
+    assert(er.value.i == 42);
+  }
   my_release();
   printf("\x1b[32m"); // green text
   printf("\u2713 ");  // Unicode check mark
@@ -312,14 +325,40 @@ void run_tests(void) {
 }
 
 int main(int argc, char **argv) {
-  if (argc != 2) {
+  if (argc < 2) {
     puts("Usage:");
-    printf("%15s %15s\n", "-t, --tests", "Run tests");
+    printf("%15s    %s\n", "-t, --tests", "Run tests");
+    printf("%15s    %s\n", "-c expr", "Evaluate expression (in quotes)");
     return 1;
   }
   if (strcmp(argv[1], "--test") == 0 || strcmp(argv[1], "-t") == 0) {
     run_tests();
     return 0;
   }
+  mt = memory_tracker_init(4096);
+  if (strcmp(argv[1], "-c") == 0) {
+    if (argc < 3) {
+      puts("No expression provided");
+      goto error_and_clean_up;
+    }
+    if (argc > 3) {
+      puts("Too many arguments");
+      goto error_and_clean_up;
+    }
+    EvalResult eval_result = eval(argv[2]);
+    if (eval_result.ok) {
+      printf("%d\n", eval_result.value.i);
+      goto success_and_clean_up;
+    } else {
+      puts("Error evaluating expression");
+      goto error_and_clean_up;
+    }
+  }
+success_and_clean_up:
+  memory_tracker_release(mt);
   return 0;
+
+error_and_clean_up:
+  memory_tracker_release(mt);
+  return 1;
 }
