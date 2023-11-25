@@ -235,11 +235,13 @@ EvalResult eval_expr_list(ExpressionsList exprs) {
 EvalResult eval(const char *s) {
   TokenizerResult tr = tokenize(s);
   if (!tr.ok) {
-    return (EvalResult){.status = TokenizationWhileEvalError};
+    return (EvalResult){.status = TokenizationWhileEvalError,
+                        .tokenizer_error = tr.error.type};
   }
   ParserResult pr = parse(tr.tokens_n, tr.tokens_sequence);
   if (!pr.ok) {
-    return (EvalResult){.status = ParsingWhileEvalError};
+    return (EvalResult){.status = ParsingWhileEvalError,
+                        .parser_error = pr.error_type};
   }
   return eval_expr_list(pr.values_list);
 }
