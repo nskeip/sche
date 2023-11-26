@@ -148,7 +148,7 @@ typedef struct {
   };
 } ParserResult;
 
-ParserResult parse(size_t tokens_n, Token tokens[]) {
+ParserResult parse(size_t tokens_n, const Token tokens[]) {
   if (tokens_n > 0 && (tokens[0].type != ParenOpenToken ||
                        tokens[tokens_n - 1].type != ParenCloseToken)) {
     return (ParserResult){.ok = false, .error_type = CheckParensParseError};
@@ -226,7 +226,7 @@ typedef struct {
   };
 } EvalResult;
 
-EvalResult eval_expr_list(ExpressionsList exprs) {
+EvalResult eval_expr_list(const ExpressionsList exprs) {
   if (exprs.head.type != NamedExpressionType) {
     return (EvalResult){.status = NamedExpressionExpectedEvalError};
   }
