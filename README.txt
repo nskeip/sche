@@ -28,6 +28,6 @@ Roadmap:
 [x] Fix the bug that invalidates pointers in Arena. Introduce ChainedArena.
   [x] Switch from Arena to simple memory tracker (as GNU C Library already has Arenas under the hood).
 [x] Make a usable calculator.
-[ ] Add nesting to the parser.
+[x] Add nesting to the parser.
 [ ] Add n-variable functions.
 [ ] ...
