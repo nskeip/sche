@@ -137,7 +137,7 @@ typedef struct ExpressionsList {
 
 typedef enum {
   TooShortExpressionParseError,
-  CheckParentesisParseError // TODO: parentHesises
+  CheckParensParseError
 } ParserErrorType;
 
 typedef struct {
@@ -151,7 +151,7 @@ typedef struct {
 ParserResult parse(size_t tokens_n, Token tokens[]) {
   if (tokens_n > 0 && (tokens[0].type != ParenOpenToken ||
                        tokens[tokens_n - 1].type != ParenCloseToken)) {
-    return (ParserResult){.ok = false, .error_type = CheckParentesisParseError};
+    return (ParserResult){.ok = false, .error_type = CheckParensParseError};
   }
   if (tokens_n < 3) {
     return (ParserResult){.ok = false,
