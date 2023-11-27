@@ -406,6 +406,7 @@ void run_tests(void) {
     assert(pr.values_list.head.type == NamedExpressionType);
     assert(*pr.values_list.head.value.s.arr == '+');
 
+    assert(pr.values_list.tail->head.type == SubExpressionType);
     assert(pr.values_list.tail->head.subexpr->head.type == NamedExpressionType);
     assert(*pr.values_list.tail->head.subexpr->head.value.s.arr == '-');
     assert(pr.values_list.tail->head.subexpr->tail->head.value.i == 5);
