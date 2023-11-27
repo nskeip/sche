@@ -413,9 +413,8 @@ void run_tests(void) {
 
     assert(pr.values_list.tail->tail->head.type == IntExpressionType);
     assert(pr.values_list.tail->tail->head.value.i == 40);
-  }
-  {
-    EvalResult er = eval("(+ (- 5 3) 40)");
+
+    EvalResult er = eval_expr_list(pr.values_list);
     assert(er.status == SuccessfulEval);
     assert(er.value.i == 42);
   }
