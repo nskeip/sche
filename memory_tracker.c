@@ -27,6 +27,7 @@ void memory_tracker_release(MemoryTracker *mt) {
     free(mt->pointers[i]);
   }
   free(mt->pointers);
+  free(mt);
 }
 
 void *memory_tracker_push(MemoryTracker *mt, size_t size) {
