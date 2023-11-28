@@ -14,13 +14,8 @@ typedef enum {
   ParenCloseToken
 } TokenType;
 
-typedef struct {
-  size_t chars_n;
-  const char *arr;
-} CharBuff;
-
 typedef union {
-  CharBuff s;
+  const char *s;
   int i;
 } Value;
 
@@ -99,15 +94,18 @@ TokenizerResult tokenize(const char *s) {
     } else if (c == ')') {
       new_token->type = ParenCloseToken;
     } else {
-      new_token->type = NameToken;
-
       const char *position_of_name_beginning = s;
-      new_token->value.s.arr = position_of_name_beginning;
       while (!is_valid_right_limiter_of_name_or_number(*(s + 1))) {
         ++s;
         ++char_no;
       }
-      new_token->value.s.chars_n = s - position_of_name_beginning + 1;
+      size_t number_of_chars_in_name = s - position_of_name_beginning + 1;
+      char *new_name = my_allocate(number_of_chars_in_name + 1);
+      strncpy(new_name, position_of_name_beginning, number_of_chars_in_name);
+      new_name[number_of_chars_in_name] = '\0';
+
+      new_token->type = NameToken;
+      new_token->value.s = new_name;
     }
   }
   result.tokens_sequence = my_allocate(sizeof(Token) * result.tokens_n);
@@ -259,7 +257,7 @@ EvalResult eval_expr_list(const ExpressionsList exprs) {
   }
 
   EvalResult result = {.status = SuccessfulEval};
-  switch (*exprs.head.value.s.arr) {
+  switch (*exprs.head.value.s) {
   case '+':
     result.value.i = a + b;
     break;
@@ -320,8 +318,7 @@ void run_tests(void) {
     assert(tr.tokens_sequence[0].type == ParenOpenToken);
 
     assert(tr.tokens_sequence[1].type == NameToken);
-    assert(tr.tokens_sequence[1].value.s.chars_n == 1);
-    assert(*tr.tokens_sequence[1].value.s.arr == '+');
+    assert(*tr.tokens_sequence[1].value.s == '+');
 
     assert(tr.tokens_sequence[2].type == NumberToken);
     assert(tr.tokens_sequence[2].value.i == -1);
@@ -344,12 +341,10 @@ void run_tests(void) {
     assert(tr.tokens_n == 2);
 
     assert(tr.tokens_sequence[0].type == NameToken);
-    assert(tr.tokens_sequence[0].value.s.chars_n == 4);
-    assert(strncmp(tr.tokens_sequence[0].value.s.arr, "e2e4", 4) == 0);
+    assert(strncmp(tr.tokens_sequence[0].value.s, "e2e4", 4) == 0);
 
     assert(tr.tokens_sequence[1].type == NameToken);
-    assert(tr.tokens_sequence[1].value.s.chars_n == 3);
-    assert(strncmp(tr.tokens_sequence[1].value.s.arr, "abc", 3) == 0);
+    assert(strncmp(tr.tokens_sequence[1].value.s, "abc", 3) == 0);
   }
   {
     assert(tokenize("").ok);
@@ -379,8 +374,7 @@ void run_tests(void) {
     ParserResult pr = parse(tr.tokens_n, tr.tokens_sequence);
     assert(pr.ok);
     assert(pr.values_list.head.type == NamedExpressionType);
-    assert(pr.values_list.head.value.s.chars_n == 1);
-    assert(strncmp(pr.values_list.head.value.s.arr, "+", 1) == 0);
+    assert(strncmp(pr.values_list.head.value.s, "+", 1) == 0);
 
     assert(pr.values_list.tail->head.type == IntExpressionType);
     assert(pr.values_list.tail->head.value.i == 1);
@@ -404,11 +398,11 @@ void run_tests(void) {
     ParserResult pr = parse(tr.tokens_n, tr.tokens_sequence);
     assert(pr.ok);
     assert(pr.values_list.head.type == NamedExpressionType);
-    assert(*pr.values_list.head.value.s.arr == '+');
+    assert(*pr.values_list.head.value.s == '+');
 
     assert(pr.values_list.tail->head.type == SubExpressionType);
     assert(pr.values_list.tail->head.subexpr->head.type == NamedExpressionType);
-    assert(*pr.values_list.tail->head.subexpr->head.value.s.arr == '-');
+    assert(*pr.values_list.tail->head.subexpr->head.value.s == '-');
     assert(pr.values_list.tail->head.subexpr->tail->head.value.i == 5);
     assert(pr.values_list.tail->head.subexpr->tail->tail->head.value.i == 3);
 
