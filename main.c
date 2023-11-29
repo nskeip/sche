@@ -420,8 +420,6 @@ void run_tests(void) {
 }
 
 int main(int argc, char **argv) {
-  run_tests(); // TODO: remove
-  return 0;
   if (argc < 2) {
     puts("__   __   _        _                _   _");
     puts("\\ \\ / /__| |_     / \\   _ __   ___ | |_| |__   ___ _ __");
