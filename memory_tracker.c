@@ -24,9 +24,11 @@ MemoryTracker *memory_tracker_init(size_t capacity) {
 void memory_tracker_release(MemoryTracker *mt) {
   for (size_t i = 0; i < mt->len; ++i) {
     free(mt->pointers[i]);
+    mt->pointers[i] = NULL;
   }
   free(mt->pointers);
   free(mt);
+  mt = NULL;
 }
 
 void *memory_tracker_push(MemoryTracker *mt, size_t size) {
