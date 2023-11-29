@@ -122,54 +122,49 @@ typedef enum {
   SubExpressionType
 } ExpressionType;
 
-typedef struct ExpressionsList {
-  struct {
-    ExpressionType type;
-    union {
-      Value value;
-      struct ExpressionsList *subexpr;
-    };
-  } head;
-  struct ExpressionsList *tail;
-} ExpressionsList;
+typedef struct Expression {
+  ExpressionType type;
+  union {
+    Value value;
+    struct Expression *subexpr;
+  };
+  struct Expression *next;
+} Expression;
 
 typedef enum {
+  SuccessfulParse,
   TooShortExpressionParseError,
   CheckParensParseError
-} ParserErrorType;
+} ParserResultType;
 
 typedef struct {
-  bool ok;
-  union {
-    ExpressionsList values_list;
-    ParserErrorType error_type;
-  };
+  ParserResultType type;
+  Expression *expr;
 } ParserResult;
 
 ParserResult parse(size_t tokens_n, const Token tokens[]) {
   if (tokens_n > 0 && (tokens[0].type != ParenOpenToken ||
                        tokens[tokens_n - 1].type != ParenCloseToken)) {
-    return (ParserResult){.ok = false, .error_type = CheckParensParseError};
+    return (ParserResult){.type = CheckParensParseError};
   }
   if (tokens_n < 3) {
-    return (ParserResult){.ok = false,
-                          .error_type = TooShortExpressionParseError};
+    return (ParserResult){.type = TooShortExpressionParseError};
   }
-  ParserResult result = {.ok = true};
-  ExpressionsList *current_values_list = &result.values_list;
+  Expression *first_expr = my_allocate(sizeof(Expression));
+  Expression *current_expr = first_expr;
   const size_t idx_of_closing_par = tokens_n - 1;
   for (size_t i = 1; i < idx_of_closing_par; ++i) {
     switch (tokens[i].type) {
     case NumberToken:
-      current_values_list->head.type = IntExpressionType;
-      current_values_list->head.value.i = tokens[i].value.i;
+      current_expr->type = IntExpressionType;
+      current_expr->value.i = tokens[i].value.i;
       break;
     case NameToken:
-      current_values_list->head.type = NamedExpressionType;
-      current_values_list->head.value.s = tokens[i].value.s;
+      current_expr->type = NamedExpressionType;
+      current_expr->value.s = tokens[i].value.s;
       break;
     case ParenOpenToken: {
-      current_values_list->head.type = SubExpressionType;
+      current_expr->type = SubExpressionType;
       size_t subexpr_tokens_n = 1;
       {
         size_t opening_parenthesis_n = 1;
@@ -183,11 +178,10 @@ ParserResult parse(size_t tokens_n, const Token tokens[]) {
         }
       }
       ParserResult subexpr_parse_result = parse(subexpr_tokens_n, tokens + i);
-      if (!subexpr_parse_result.ok) {
-        return (ParserResult){.ok = false,
-                              .error_type = subexpr_parse_result.error_type};
+      if (subexpr_parse_result.type != SuccessfulParse) {
+        return (ParserResult){.type = subexpr_parse_result.type};
       }
-      current_values_list->head.subexpr = &subexpr_parse_result.values_list;
+      current_expr->subexpr = subexpr_parse_result.expr;
       i += subexpr_tokens_n - 1;
       break;
     }
@@ -197,12 +191,12 @@ ParserResult parse(size_t tokens_n, const Token tokens[]) {
 
     const bool we_have_some_tokens_left = i != idx_of_closing_par - 1;
     if (we_have_some_tokens_left) {
-      current_values_list->tail = my_allocate(sizeof(ExpressionsList));
-      current_values_list->tail->tail = NULL;
-      current_values_list = current_values_list->tail;
+      current_expr->next = my_allocate(sizeof(Expression));
+      current_expr = current_expr->next;
+      current_expr->next = NULL;
     }
   }
-  return result;
+  return (ParserResult){.type = SuccessfulParse, .expr = first_expr};
 }
 
 typedef enum {
@@ -219,21 +213,24 @@ typedef struct {
   EvalStatus status;
   union {
     TokenizerErrorType tokenizer_error;
-    ParserErrorType parser_error;
+    ParserResultType parser_error;
     Value value;
   };
 } EvalResult;
 
-EvalResult eval_expr_list(const ExpressionsList exprs) {
-  if (exprs.head.type != NamedExpressionType) {
-    return (EvalResult){.status = NamedExpressionExpectedEvalError};
+EvalResult eval_expr_list(const Expression *expr) {
+  {
+    bool expression_begins_with_name = expr->type == NamedExpressionType;
+    if (!expression_begins_with_name) {
+      return (EvalResult){.status = NamedExpressionExpectedEvalError};
+    }
   }
 
   int a;
-  if (exprs.tail->head.type == IntExpressionType) {
-    a = exprs.tail->head.value.i;
-  } else if (exprs.tail->head.type == SubExpressionType) {
-    EvalResult subexpr_eval_result = eval_expr_list(*exprs.tail->head.subexpr);
+  if (expr->next->type == IntExpressionType) {
+    a = expr->next->value.i;
+  } else if (expr->next->type == SubExpressionType) {
+    EvalResult subexpr_eval_result = eval_expr_list(expr->next->subexpr);
     if (subexpr_eval_result.status != SuccessfulEval) {
       return subexpr_eval_result;
     }
@@ -243,11 +240,10 @@ EvalResult eval_expr_list(const ExpressionsList exprs) {
   }
 
   int b;
-  if (exprs.tail->tail->head.type == IntExpressionType) {
-    b = exprs.tail->tail->head.value.i;
-  } else if (exprs.tail->tail->head.type == SubExpressionType) {
-    EvalResult subexpr_eval_result =
-        eval_expr_list(*exprs.tail->tail->head.subexpr);
+  if (expr->next->next->type == IntExpressionType) {
+    b = expr->next->next->value.i;
+  } else if (expr->next->next->type == SubExpressionType) {
+    EvalResult subexpr_eval_result = eval_expr_list(expr->next->next->subexpr);
     if (subexpr_eval_result.status != SuccessfulEval) {
       return subexpr_eval_result;
     }
@@ -257,7 +253,7 @@ EvalResult eval_expr_list(const ExpressionsList exprs) {
   }
 
   EvalResult result = {.status = SuccessfulEval};
-  switch (*exprs.head.value.s) {
+  switch (*expr->value.s) {
   case '+':
     result.value.i = a + b;
     break;
@@ -290,11 +286,11 @@ EvalResult eval(const char *s) {
                         .tokenizer_error = tr.error.type};
   }
   ParserResult pr = parse(tr.tokens_n, tr.tokens_sequence);
-  if (!pr.ok) {
+  if (pr.type != SuccessfulParse) {
     return (EvalResult){.status = ParsingWhileEvalError,
-                        .parser_error = pr.error_type};
+                        .parser_error = pr.type};
   }
-  return eval_expr_list(pr.values_list);
+  return eval_expr_list(pr.expr);
 }
 
 void run_tests(void) {
@@ -359,31 +355,33 @@ void run_tests(void) {
     TokenizerResult tr = tokenize("");
     assert(tr.ok);
     assert(tr.tokens_n == 0);
-    assert(!parse(tr.tokens_n, tr.tokens_sequence).ok);
+    assert(parse(tr.tokens_n, tr.tokens_sequence).type ==
+           TooShortExpressionParseError);
   }
   {
     TokenizerResult tr = tokenize("()");
     assert(tr.ok);
     assert(tr.tokens_n == 2);
-    assert(!parse(tr.tokens_n, tr.tokens_sequence).ok);
+    assert(parse(tr.tokens_n, tr.tokens_sequence).type ==
+           TooShortExpressionParseError);
   }
   {
     TokenizerResult tr = tokenize("(+ 1 2)");
     assert(tr.ok);
 
     ParserResult pr = parse(tr.tokens_n, tr.tokens_sequence);
-    assert(pr.ok);
-    assert(pr.values_list.head.type == NamedExpressionType);
-    assert(strncmp(pr.values_list.head.value.s, "+", 1) == 0);
+    assert(pr.type == SuccessfulParse);
+    assert(pr.expr->type == NamedExpressionType);
+    assert(strncmp(pr.expr->value.s, "+", 1) == 0);
 
-    assert(pr.values_list.tail->head.type == IntExpressionType);
-    assert(pr.values_list.tail->head.value.i == 1);
+    assert(pr.expr->next->type == IntExpressionType);
+    assert(pr.expr->next->value.i == 1);
 
-    assert(pr.values_list.tail->tail->head.type == IntExpressionType);
-    assert(pr.values_list.tail->tail->head.value.i == 2);
-    assert(pr.values_list.tail->tail->tail == NULL);
+    assert(pr.expr->next->next->type == IntExpressionType);
+    assert(pr.expr->next->next->value.i == 2);
+    assert(pr.expr->next->next->next == NULL);
 
-    EvalResult er = eval_expr_list(pr.values_list);
+    EvalResult er = eval_expr_list(pr.expr);
     assert(er.status == SuccessfulEval);
     assert(er.value.i == 3);
   }
@@ -396,20 +394,22 @@ void run_tests(void) {
     TokenizerResult tr = tokenize("(+ (- 5 3) 40)");
     assert(tr.ok);
     ParserResult pr = parse(tr.tokens_n, tr.tokens_sequence);
-    assert(pr.ok);
-    assert(pr.values_list.head.type == NamedExpressionType);
-    assert(*pr.values_list.head.value.s == '+');
+    assert(pr.type == SuccessfulParse);
+    assert(pr.expr->type == NamedExpressionType);
+    assert(*pr.expr->value.s == '+');
 
-    assert(pr.values_list.tail->head.type == SubExpressionType);
-    assert(pr.values_list.tail->head.subexpr->head.type == NamedExpressionType);
-    assert(*pr.values_list.tail->head.subexpr->head.value.s == '-');
-    assert(pr.values_list.tail->head.subexpr->tail->head.value.i == 5);
-    assert(pr.values_list.tail->head.subexpr->tail->tail->head.value.i == 3);
+    assert(pr.expr->next != NULL);
+    assert(pr.expr->next->type == SubExpressionType);
+    assert(pr.expr->next->subexpr != NULL);
+    assert(pr.expr->next->subexpr->type == NamedExpressionType);
+    assert(*pr.expr->next->subexpr->value.s == '-');
+    assert(pr.expr->next->subexpr->next->value.i == 5);
+    assert(pr.expr->next->subexpr->next->next->value.i == 3);
 
-    assert(pr.values_list.tail->tail->head.type == IntExpressionType);
-    assert(pr.values_list.tail->tail->head.value.i == 40);
+    assert(pr.expr->next->next->type == IntExpressionType);
+    assert(pr.expr->next->next->value.i == 40);
 
-    EvalResult er = eval_expr_list(pr.values_list);
+    EvalResult er = eval_expr_list(pr.expr);
     assert(er.status == SuccessfulEval);
     assert(er.value.i == 42);
   }
@@ -421,6 +421,8 @@ void run_tests(void) {
 }
 
 int main(int argc, char **argv) {
+  run_tests(); // TODO: remove
+  return 0;
   if (argc < 2) {
     puts("__   __   _        _                _   _");
     puts("\\ \\ / /__| |_     / \\   _ __   ___ | |_| |__   ___ _ __");
