@@ -53,3 +53,4 @@ dkms.conf
 
 # Project specific
 scheme-exe
+vgcore.*
