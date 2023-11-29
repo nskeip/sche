@@ -207,10 +207,10 @@ typedef enum {
   IntegerOrSubExpressionExpectedEvalError,
   ZeroDivisionEvalError,
   UndefinedFunctionEvalError
-} EvalStatus;
+} EvalResultType;
 
 typedef struct {
-  EvalStatus status;
+  EvalResultType type;
   union {
     TokenizerErrorType tokenizer_error;
     ParserResultType parser_error;
@@ -222,7 +222,7 @@ EvalResult eval_expr_list(const Expression *expr) {
   {
     bool expression_begins_with_name = expr->type == NamedExpressionType;
     if (!expression_begins_with_name) {
-      return (EvalResult){.status = NamedExpressionExpectedEvalError};
+      return (EvalResult){.type = NamedExpressionExpectedEvalError};
     }
   }
 
@@ -231,12 +231,12 @@ EvalResult eval_expr_list(const Expression *expr) {
     a = expr->next->value.i;
   } else if (expr->next->type == SubExpressionType) {
     EvalResult subexpr_eval_result = eval_expr_list(expr->next->subexpr);
-    if (subexpr_eval_result.status != SuccessfulEval) {
+    if (subexpr_eval_result.type != SuccessfulEval) {
       return subexpr_eval_result;
     }
     a = subexpr_eval_result.value.i;
   } else {
-    return (EvalResult){.status = IntegerOrSubExpressionExpectedEvalError};
+    return (EvalResult){.type = IntegerOrSubExpressionExpectedEvalError};
   }
 
   int b;
@@ -244,15 +244,15 @@ EvalResult eval_expr_list(const Expression *expr) {
     b = expr->next->next->value.i;
   } else if (expr->next->next->type == SubExpressionType) {
     EvalResult subexpr_eval_result = eval_expr_list(expr->next->next->subexpr);
-    if (subexpr_eval_result.status != SuccessfulEval) {
+    if (subexpr_eval_result.type != SuccessfulEval) {
       return subexpr_eval_result;
     }
     b = subexpr_eval_result.value.i;
   } else {
-    return (EvalResult){.status = IntegerOrSubExpressionExpectedEvalError};
+    return (EvalResult){.type = IntegerOrSubExpressionExpectedEvalError};
   }
 
-  EvalResult result = {.status = SuccessfulEval};
+  EvalResult result = {.type = SuccessfulEval};
   switch (*expr->value.s) {
   case '+':
     result.value.i = a + b;
@@ -265,7 +265,7 @@ EvalResult eval_expr_list(const Expression *expr) {
     break;
   case '/': {
     if (b == 0) {
-      return (EvalResult){.status = ZeroDivisionEvalError};
+      return (EvalResult){.type = ZeroDivisionEvalError};
     }
     result.value.i = a / b;
     break;
@@ -274,7 +274,7 @@ EvalResult eval_expr_list(const Expression *expr) {
     result.value.i = a % b;
     break;
   default:
-    return (EvalResult){.status = UndefinedFunctionEvalError};
+    return (EvalResult){.type = UndefinedFunctionEvalError};
   }
   return result;
 }
@@ -282,13 +282,12 @@ EvalResult eval_expr_list(const Expression *expr) {
 EvalResult eval(const char *s) {
   TokenizerResult tr = tokenize(s);
   if (!tr.ok) {
-    return (EvalResult){.status = TokenizationWhileEvalError,
+    return (EvalResult){.type = TokenizationWhileEvalError,
                         .tokenizer_error = tr.error.type};
   }
   ParserResult pr = parse(tr.tokens_n, tr.tokens_sequence);
   if (pr.type != SuccessfulParse) {
-    return (EvalResult){.status = ParsingWhileEvalError,
-                        .parser_error = pr.type};
+    return (EvalResult){.type = ParsingWhileEvalError, .parser_error = pr.type};
   }
   return eval_expr_list(pr.expr);
 }
@@ -382,12 +381,12 @@ void run_tests(void) {
     assert(pr.expr->next->next->next == NULL);
 
     EvalResult er = eval_expr_list(pr.expr);
-    assert(er.status == SuccessfulEval);
+    assert(er.type == SuccessfulEval);
     assert(er.value.i == 3);
   }
   {
     EvalResult er = eval("(+ 22 20)");
-    assert(er.status == SuccessfulEval);
+    assert(er.type == SuccessfulEval);
     assert(er.value.i == 42);
   }
   {
@@ -410,7 +409,7 @@ void run_tests(void) {
     assert(pr.expr->next->next->value.i == 40);
 
     EvalResult er = eval_expr_list(pr.expr);
-    assert(er.status == SuccessfulEval);
+    assert(er.type == SuccessfulEval);
     assert(er.value.i == 42);
   }
   my_release();
@@ -464,7 +463,7 @@ int main(int argc, char **argv) {
       goto error_and_clean_up;
     }
     EvalResult eval_result = eval(argv[2]);
-    switch (eval_result.status) {
+    switch (eval_result.type) {
     case SuccessfulEval: {
       printf("%d\n", eval_result.value.i);
       goto success_and_clean_up;
