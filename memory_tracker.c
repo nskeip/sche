@@ -1,5 +1,4 @@
 #include "memory_tracker.h"
-#include <assert.h>
 #include <stddef.h>
 #include <stdlib.h>
 
