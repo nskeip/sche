@@ -411,6 +411,17 @@ void run_tests(void) {
     EvalResult er = eval_expr_list(pr.expr);
     assert(er.type == SuccessfulEval);
     assert(er.value.i == 42);
+
+    // and nothing changed after evaluation
+    assert(pr.expr->next->type == SubExpressionType);
+    assert(pr.expr->next->subexpr != NULL);
+    assert(pr.expr->next->subexpr->type == NamedExpressionType);
+    assert(*pr.expr->next->subexpr->value.s == '-');
+    assert(pr.expr->next->subexpr->next->value.i == 5);
+    assert(pr.expr->next->subexpr->next->next->value.i == 3);
+
+    assert(pr.expr->next->next->type == IntExpressionType);
+    assert(pr.expr->next->next->value.i == 40);
   }
   my_release();
   printf("\x1b[32m"); // green text
