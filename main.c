@@ -145,10 +145,10 @@ typedef struct {
 ParserResult parse(size_t tokens_n, const Token tokens[]) {
   if (tokens_n > 0 && (tokens[0].type != ParenOpenToken ||
                        tokens[tokens_n - 1].type != ParenCloseToken)) {
-    return (ParserResult){.type = CheckParensParseError};
+    return (ParserResult){.type = CheckParensParseError, .expr = NULL};
   }
   if (tokens_n < 3) {
-    return (ParserResult){.type = TooShortExpressionParseError};
+    return (ParserResult){.type = TooShortExpressionParseError, .expr = NULL};
   }
   Expression *first_expr = my_allocate(sizeof(Expression));
   Expression *current_expr = first_expr;
@@ -179,7 +179,7 @@ ParserResult parse(size_t tokens_n, const Token tokens[]) {
       }
       ParserResult subexpr_parse_result = parse(subexpr_tokens_n, tokens + i);
       if (subexpr_parse_result.type != SuccessfulParse) {
-        return (ParserResult){.type = subexpr_parse_result.type};
+        return (ParserResult){.type = subexpr_parse_result.type, .expr = NULL};
       }
       current_expr->subexpr = subexpr_parse_result.expr;
       i += subexpr_tokens_n - 1;
