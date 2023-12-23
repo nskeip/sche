@@ -150,7 +150,7 @@ ParserResult parse(size_t tokens_n, const Token tokens[]) {
   if (tokens_n < 3) {
     return (ParserResult){.type = TooShortExpressionParseError, .expr = NULL};
   }
-  Expression *first_expr = my_allocate(sizeof(Expression));
+  Expression *const first_expr = my_allocate(sizeof(Expression));
   Expression *current_expr = first_expr;
   const size_t idx_of_closing_par = tokens_n - 1;
   for (size_t i = 1; i < idx_of_closing_par; ++i) {
