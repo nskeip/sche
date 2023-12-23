@@ -34,9 +34,7 @@ typedef struct {
   size_t tokens_n;
   union {
     Token *tokens_sequence;
-    struct {
-      TokenizerErrorType type;
-    } error;
+    TokenizerErrorType error_type;
   };
 } TokenizerResult;
 
@@ -81,7 +79,7 @@ TokenizerResult tokenize(const char *s) {
         memory_tracker_release(tmp_tokens);
         return (TokenizerResult){
             .ok = false,
-            .error.type = NameWithDigitsInBeginningTokenizerError,
+            .error_type = NameWithDigitsInBeginningTokenizerError,
         };
       }
     } else if (c == '(') {
@@ -278,7 +276,7 @@ EvalResult eval(const char *s) {
   TokenizerResult tr = tokenize(s);
   if (!tr.ok) {
     return (EvalResult){.type = TokenizationWhileEvalError,
-                        .tokenizer_error = tr.error.type};
+                        .tokenizer_error = tr.error_type};
   }
   ParserResult pr = parse(tr.tokens_n, tr.tokens_sequence);
   if (pr.type != SuccessfulParse) {
@@ -321,7 +319,7 @@ void run_tests(void) {
   {
     TokenizerResult tr = tokenize("99c");
     assert(!tr.ok);
-    assert(tr.error.type == NameWithDigitsInBeginningTokenizerError);
+    assert(tr.error_type == NameWithDigitsInBeginningTokenizerError);
   }
   {
     TokenizerResult tr = tokenize("e2e4 abc");
