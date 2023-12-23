@@ -36,8 +36,6 @@ typedef struct {
     Token *tokens_sequence;
     struct {
       TokenizerErrorType type;
-      size_t line_no;
-      size_t char_no;
     } error;
   };
 } TokenizerResult;
@@ -53,7 +51,6 @@ static void *my_allocate(size_t size) { return memory_tracker_push(mt, size); }
 static void my_release() { memory_tracker_release(mt); }
 
 TokenizerResult tokenize(const char *s) {
-  size_t line_no = 0;
   int sign = 1;
   TokenizerResult result = {.ok = true, .tokens_n = 0};
   MemoryTracker *tmp_tokens = memory_tracker_init(4096);
@@ -61,7 +58,6 @@ TokenizerResult tokenize(const char *s) {
     char c = *s;
     if (isspace(c)) {
       if (c == '\n') {
-        ++line_no;
         char_no = 0;
       }
       continue;
@@ -83,11 +79,10 @@ TokenizerResult tokenize(const char *s) {
       }
       if (!is_valid_right_limiter_of_name_or_number(*(s + 1))) {
         memory_tracker_release(tmp_tokens);
-        return (TokenizerResult){.ok = false,
-                                 .error.type =
-                                     NameWithDigitsInBeginningTokenizerError,
-                                 .error.line_no = line_no,
-                                 .error.char_no = char_no};
+        return (TokenizerResult){
+            .ok = false,
+            .error.type = NameWithDigitsInBeginningTokenizerError,
+        };
       }
     } else if (c == '(') {
       new_token->type = ParenOpenToken;
@@ -327,8 +322,6 @@ void run_tests(void) {
     TokenizerResult tr = tokenize("99c");
     assert(!tr.ok);
     assert(tr.error.type == NameWithDigitsInBeginningTokenizerError);
-    assert(tr.error.line_no == 0);
-    assert(tr.error.char_no == 1);
   }
   {
     TokenizerResult tr = tokenize("e2e4 abc");
