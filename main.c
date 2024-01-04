@@ -8,10 +8,10 @@
 #include <string.h>
 
 typedef enum {
-  NumberToken,
-  NameToken,
-  ParenOpenToken,
-  ParenCloseToken
+  TOKEN_TYPE_NUMBER,
+  TOKEN_TYPE_NAME,
+  TOKEN_TYPE_PAR_OPEN,
+  TOKEN_TYPE_PAR_CLOSE
 } TokenType;
 
 typedef union {
@@ -25,9 +25,9 @@ typedef struct {
 } Token;
 
 typedef enum {
-  SuccessfulTokenization,
-  TooManyTokensTokenizerError,
-  NameWithDigitsInBeginningTokenizerError
+  TOKENIZER_SUCCESS,
+  TOKENIZER_ERROR_TOO_MANY_TOKENS,
+  TOKENIZER_ERROR_INVALID_NAME
 } TokenizerStatus;
 
 typedef struct {
@@ -47,7 +47,7 @@ static void my_release() { memory_tracker_release(mt); }
 
 TokenizerStatus tokenize(const char *s, TokenList *out_token_list) {
   int sign = 1;
-  TokenizerStatus result = SuccessfulTokenization;
+  TokenizerStatus result = TOKENIZER_SUCCESS;
   *out_token_list = (TokenList){.tokens_n = 0, .tokens = NULL};
 
   MemoryTracker *tmp_tokens = memory_tracker_init(4096);
@@ -67,7 +67,7 @@ TokenizerStatus tokenize(const char *s, TokenList *out_token_list) {
     assert(new_token != NULL);
     out_token_list->tokens_n++;
     if (isdigit(c)) {
-      new_token->type = NumberToken;
+      new_token->type = TOKEN_TYPE_NUMBER;
       new_token->value.i = sign * atoi(s);
       sign = 1;
       while (isdigit(*(s + 1))) {
@@ -76,12 +76,12 @@ TokenizerStatus tokenize(const char *s, TokenList *out_token_list) {
       }
       if (!is_valid_right_limiter_of_name_or_number(*(s + 1))) {
         memory_tracker_release(tmp_tokens);
-        return NameWithDigitsInBeginningTokenizerError;
+        return TOKENIZER_ERROR_INVALID_NAME;
       }
     } else if (c == '(') {
-      new_token->type = ParenOpenToken;
+      new_token->type = TOKEN_TYPE_PAR_OPEN;
     } else if (c == ')') {
-      new_token->type = ParenCloseToken;
+      new_token->type = TOKEN_TYPE_PAR_CLOSE;
     } else {
       const char *position_of_name_beginning = s;
       while (!is_valid_right_limiter_of_name_or_number(*(s + 1))) {
@@ -93,7 +93,7 @@ TokenizerStatus tokenize(const char *s, TokenList *out_token_list) {
       strncpy(new_name, position_of_name_beginning, number_of_chars_in_name);
       new_name[number_of_chars_in_name] = '\0';
 
-      new_token->type = NameToken;
+      new_token->type = TOKEN_TYPE_NAME;
       new_token->value.s = new_name;
     }
   }
@@ -107,9 +107,9 @@ TokenizerStatus tokenize(const char *s, TokenList *out_token_list) {
 }
 
 typedef enum {
-  NamedExpressionType,
-  IntExpressionType,
-  SubExpressionType
+  EXPR_TYPE_NAME,
+  EXPR_TYPE_INT,
+  EXPR_TYPE_SUBEXPR
 } ExpressionType;
 
 typedef struct Expression {
@@ -122,9 +122,9 @@ typedef struct Expression {
 } Expression;
 
 typedef enum {
-  SuccessfulParse,
-  TooShortExpressionParseError,
-  CheckParensParseError
+  PARSE_SUCCESS,
+  PARSE_ERROR_TOO_SHORT_EXPR,
+  PARSE_ERROR_UNBALANCED_PAR
 } ParserResultType;
 
 typedef struct {
@@ -133,49 +133,50 @@ typedef struct {
 } ParserResult;
 
 ParserResult parse(size_t tokens_n, const Token tokens[]) {
-  if (tokens_n > 0 && (tokens[0].type != ParenOpenToken ||
-                       tokens[tokens_n - 1].type != ParenCloseToken)) {
-    return (ParserResult){.type = CheckParensParseError, .expr = NULL};
+  if (tokens_n > 0 && (tokens[0].type != TOKEN_TYPE_PAR_OPEN ||
+                       tokens[tokens_n - 1].type != TOKEN_TYPE_PAR_CLOSE)) {
+    return (ParserResult){.type = PARSE_ERROR_UNBALANCED_PAR, .expr = NULL};
   }
   if (tokens_n < 3) {
-    return (ParserResult){.type = TooShortExpressionParseError, .expr = NULL};
+    return (ParserResult){.type = PARSE_ERROR_TOO_SHORT_EXPR, .expr = NULL};
   }
   Expression *const first_expr = my_allocate(sizeof(Expression));
   Expression *current_expr = first_expr;
   const size_t idx_of_closing_par = tokens_n - 1;
   for (size_t i = 1; i < idx_of_closing_par; ++i) {
     switch (tokens[i].type) {
-    case NumberToken:
-      current_expr->type = IntExpressionType;
+    case TOKEN_TYPE_NUMBER:
+      current_expr->type = EXPR_TYPE_INT;
       current_expr->value.i = tokens[i].value.i;
       break;
-    case NameToken:
-      current_expr->type = NamedExpressionType;
+    case TOKEN_TYPE_NAME:
+      current_expr->type = EXPR_TYPE_SUBEXPR;
       current_expr->value.s = tokens[i].value.s;
       break;
-    case ParenOpenToken: {
-      current_expr->type = SubExpressionType;
+    case TOKEN_TYPE_PAR_OPEN: {
+      current_expr->type = EXPR_TYPE_SUBEXPR;
       size_t subexpr_tokens_n = 1;
       {
         size_t opening_parenthesis_n = 1;
         while (opening_parenthesis_n != 0) {
-          if (tokens[i + subexpr_tokens_n].type == ParenOpenToken) {
+          if (tokens[i + subexpr_tokens_n].type == TOKEN_TYPE_PAR_OPEN) {
             ++opening_parenthesis_n;
-          } else if (tokens[i + subexpr_tokens_n].type == ParenCloseToken) {
+          } else if (tokens[i + subexpr_tokens_n].type ==
+                     TOKEN_TYPE_PAR_CLOSE) {
             --opening_parenthesis_n;
           }
           ++subexpr_tokens_n;
         }
       }
       ParserResult subexpr_parse_result = parse(subexpr_tokens_n, tokens + i);
-      if (subexpr_parse_result.type != SuccessfulParse) {
+      if (subexpr_parse_result.type != PARSE_SUCCESS) {
         return (ParserResult){.type = subexpr_parse_result.type, .expr = NULL};
       }
       current_expr->subexpr = subexpr_parse_result.expr;
       i += subexpr_tokens_n - 1;
       break;
     }
-    case ParenCloseToken:
+    case TOKEN_TYPE_PAR_CLOSE:
       assert(false);
     }
 
@@ -186,17 +187,17 @@ ParserResult parse(size_t tokens_n, const Token tokens[]) {
       current_expr->next = NULL;
     }
   }
-  return (ParserResult){.type = SuccessfulParse, .expr = first_expr};
+  return (ParserResult){.type = PARSE_SUCCESS, .expr = first_expr};
 }
 
 typedef enum {
-  SuccessfulEval,
-  TokenizationWhileEvalError,
-  ParsingWhileEvalError,
-  NamedExpressionExpectedEvalError,
-  IntegerOrSubExpressionExpectedEvalError,
-  ZeroDivisionEvalError,
-  UndefinedFunctionEvalError
+  EVAL_SUCCESS,
+  EVAL_ERROR_TOKENIZATION,
+  EVAL_ERROR_PARSING,
+  EVAL_ERROR_NAME_EXPECTED,
+  EVAL_ERROR_NAME_OR_SUBEXPR_EXPECTED,
+  EVAL_ERROR_DIVISION_BY_ZERO,
+  EVAL_ERROR_UNDEFINED_FUNCTION
 } EvalResultType;
 
 typedef struct {
@@ -210,39 +211,39 @@ typedef struct {
 
 EvalResult eval_expr_list(const Expression *expr) {
   {
-    bool expression_begins_with_name = expr->type == NamedExpressionType;
+    bool expression_begins_with_name = expr->type == EXPR_TYPE_SUBEXPR;
     if (!expression_begins_with_name) {
-      return (EvalResult){.type = NamedExpressionExpectedEvalError};
+      return (EvalResult){.type = EVAL_ERROR_NAME_EXPECTED};
     }
   }
 
   int a;
-  if (expr->next->type == IntExpressionType) {
+  if (expr->next->type == EXPR_TYPE_INT) {
     a = expr->next->value.i;
-  } else if (expr->next->type == SubExpressionType) {
+  } else if (expr->next->type == EXPR_TYPE_SUBEXPR) {
     EvalResult subexpr_eval_result = eval_expr_list(expr->next->subexpr);
-    if (subexpr_eval_result.type != SuccessfulEval) {
+    if (subexpr_eval_result.type != EVAL_SUCCESS) {
       return subexpr_eval_result;
     }
     a = subexpr_eval_result.value.i;
   } else {
-    return (EvalResult){.type = IntegerOrSubExpressionExpectedEvalError};
+    return (EvalResult){.type = EVAL_ERROR_NAME_OR_SUBEXPR_EXPECTED};
   }
 
   int b;
-  if (expr->next->next->type == IntExpressionType) {
+  if (expr->next->next->type == EXPR_TYPE_INT) {
     b = expr->next->next->value.i;
-  } else if (expr->next->next->type == SubExpressionType) {
+  } else if (expr->next->next->type == EXPR_TYPE_SUBEXPR) {
     EvalResult subexpr_eval_result = eval_expr_list(expr->next->next->subexpr);
-    if (subexpr_eval_result.type != SuccessfulEval) {
+    if (subexpr_eval_result.type != EVAL_SUCCESS) {
       return subexpr_eval_result;
     }
     b = subexpr_eval_result.value.i;
   } else {
-    return (EvalResult){.type = IntegerOrSubExpressionExpectedEvalError};
+    return (EvalResult){.type = EVAL_ERROR_NAME_OR_SUBEXPR_EXPECTED};
   }
 
-  EvalResult result = {.type = SuccessfulEval};
+  EvalResult result = {.type = EVAL_SUCCESS};
   switch (*expr->value.s) {
   case '+':
     result.value.i = a + b;
@@ -255,7 +256,7 @@ EvalResult eval_expr_list(const Expression *expr) {
     break;
   case '/': {
     if (b == 0) {
-      return (EvalResult){.type = ZeroDivisionEvalError};
+      return (EvalResult){.type = EVAL_ERROR_DIVISION_BY_ZERO};
     }
     result.value.i = a / b;
     break;
@@ -264,7 +265,7 @@ EvalResult eval_expr_list(const Expression *expr) {
     result.value.i = a % b;
     break;
   default:
-    return (EvalResult){.type = UndefinedFunctionEvalError};
+    return (EvalResult){.type = EVAL_ERROR_UNDEFINED_FUNCTION};
   }
   return result;
 }
@@ -272,13 +273,13 @@ EvalResult eval_expr_list(const Expression *expr) {
 EvalResult eval(const char *s) {
   TokenList ts = {0};
   TokenizerStatus tok_status = tokenize(s, &ts);
-  if (tok_status != SuccessfulTokenization) {
-    return (EvalResult){.type = TokenizationWhileEvalError,
+  if (tok_status != TOKENIZER_SUCCESS) {
+    return (EvalResult){.type = EVAL_ERROR_TOKENIZATION,
                         .tokenizer_error = tok_status};
   }
   ParserResult pr = parse(ts.tokens_n, ts.tokens);
-  if (pr.type != SuccessfulParse) {
-    return (EvalResult){.type = ParsingWhileEvalError, .parser_error = pr.type};
+  if (pr.type != PARSE_SUCCESS) {
+    return (EvalResult){.type = EVAL_ERROR_PARSING, .parser_error = pr.type};
   }
   return eval_expr_list(pr.expr);
 }
@@ -294,128 +295,128 @@ void run_tests(void) {
 
     TokenList ts = {0};
     TokenizerStatus status = tokenize(many_tokens, &ts);
-    assert(status == SuccessfulTokenization);
+    assert(status == TOKENIZER_SUCCESS);
     assert(ts.tokens_n == 2047);
   }
   {
     TokenList ts = {0};
     TokenizerStatus status = tokenize("(+ -1 20)", &ts);
-    assert(status == SuccessfulTokenization);
+    assert(status == TOKENIZER_SUCCESS);
     assert(ts.tokens_n == 5);
 
-    assert(ts.tokens[0].type == ParenOpenToken);
+    assert(ts.tokens[0].type == TOKEN_TYPE_PAR_OPEN);
 
-    assert(ts.tokens[1].type == NameToken);
+    assert(ts.tokens[1].type == TOKEN_TYPE_NAME);
     assert(*ts.tokens[1].value.s == '+');
 
-    assert(ts.tokens[2].type == NumberToken);
+    assert(ts.tokens[2].type == TOKEN_TYPE_NUMBER);
     assert(ts.tokens[2].value.i == -1);
 
-    assert(ts.tokens[3].type == NumberToken);
+    assert(ts.tokens[3].type == TOKEN_TYPE_NUMBER);
     assert(ts.tokens[3].value.i == 20);
 
-    assert(ts.tokens[4].type == ParenCloseToken);
+    assert(ts.tokens[4].type == TOKEN_TYPE_PAR_CLOSE);
   }
   {
     TokenList ts = {0};
     TokenizerStatus status = tokenize("99c", &ts);
-    assert(status == NameWithDigitsInBeginningTokenizerError);
+    assert(status == TOKENIZER_ERROR_INVALID_NAME);
   }
   {
     TokenList ts = {0};
     TokenizerStatus status = tokenize("e2e4 abc", &ts);
-    assert(status == SuccessfulTokenization);
+    assert(status == TOKENIZER_SUCCESS);
     assert(ts.tokens_n == 2);
 
-    assert(ts.tokens[0].type == NameToken);
+    assert(ts.tokens[0].type == TOKEN_TYPE_NAME);
     assert(strncmp(ts.tokens[0].value.s, "e2e4", 4) == 0);
 
-    assert(ts.tokens[1].type == NameToken);
+    assert(ts.tokens[1].type == TOKEN_TYPE_NAME);
     assert(strncmp(ts.tokens[1].value.s, "abc", 3) == 0);
   }
   {
     TokenList ts = {0};
-    assert(tokenize("", &ts) == SuccessfulTokenization);
-    assert(tokenize("my-variable", &ts) == SuccessfulTokenization);
-    assert(tokenize("*special*", &ts) == SuccessfulTokenization);
-    assert(tokenize("+special+", &ts) == SuccessfulTokenization);
-    assert(tokenize("/divide/", &ts) == SuccessfulTokenization);
-    assert(tokenize("=eq=", &ts) == SuccessfulTokenization);
-    assert(tokenize("variable_with_underscore", &ts) == SuccessfulTokenization);
+    assert(tokenize("", &ts) == TOKENIZER_SUCCESS);
+    assert(tokenize("my-variable", &ts) == TOKENIZER_SUCCESS);
+    assert(tokenize("*special*", &ts) == TOKENIZER_SUCCESS);
+    assert(tokenize("+special+", &ts) == TOKENIZER_SUCCESS);
+    assert(tokenize("/divide/", &ts) == TOKENIZER_SUCCESS);
+    assert(tokenize("=eq=", &ts) == TOKENIZER_SUCCESS);
+    assert(tokenize("variable_with_underscore", &ts) == TOKENIZER_SUCCESS);
   }
   {
     TokenList ts = {0};
     TokenizerStatus status = tokenize("", &ts);
-    assert(status == SuccessfulTokenization);
+    assert(status == TOKENIZER_SUCCESS);
     assert(ts.tokens_n == 0);
-    assert(parse(ts.tokens_n, ts.tokens).type == TooShortExpressionParseError);
+    assert(parse(ts.tokens_n, ts.tokens).type == PARSE_ERROR_TOO_SHORT_EXPR);
   }
   {
     TokenList ts = {0};
     TokenizerStatus status = tokenize("()", &ts);
-    assert(status == SuccessfulTokenization);
+    assert(status == TOKENIZER_SUCCESS);
     assert(ts.tokens_n == 2);
-    assert(parse(ts.tokens_n, ts.tokens).type == TooShortExpressionParseError);
+    assert(parse(ts.tokens_n, ts.tokens).type == PARSE_ERROR_TOO_SHORT_EXPR);
   }
   {
     TokenList ts = {0};
     TokenizerStatus status = tokenize("(+ 1 2)", &ts);
-    assert(status == SuccessfulTokenization);
+    assert(status == TOKENIZER_SUCCESS);
 
     ParserResult pr = parse(ts.tokens_n, ts.tokens);
-    assert(pr.type == SuccessfulParse);
-    assert(pr.expr->type == NamedExpressionType);
+    assert(pr.type == PARSE_SUCCESS);
+    assert(pr.expr->type == EXPR_TYPE_SUBEXPR);
     assert(strncmp(pr.expr->value.s, "+", 1) == 0);
 
-    assert(pr.expr->next->type == IntExpressionType);
+    assert(pr.expr->next->type == EXPR_TYPE_INT);
     assert(pr.expr->next->value.i == 1);
 
-    assert(pr.expr->next->next->type == IntExpressionType);
+    assert(pr.expr->next->next->type == EXPR_TYPE_INT);
     assert(pr.expr->next->next->value.i == 2);
     assert(pr.expr->next->next->next == NULL);
 
     EvalResult er = eval_expr_list(pr.expr);
-    assert(er.type == SuccessfulEval);
+    assert(er.type == EVAL_SUCCESS);
     assert(er.value.i == 3);
   }
   {
     EvalResult er = eval("(+ 22 20)");
-    assert(er.type == SuccessfulEval);
+    assert(er.type == EVAL_SUCCESS);
     assert(er.value.i == 42);
   }
   {
     TokenList ts = {0};
     TokenizerStatus status = tokenize("(+ (- 5 3) 40)", &ts);
-    assert(status == SuccessfulTokenization);
+    assert(status == TOKENIZER_SUCCESS);
     ParserResult pr = parse(ts.tokens_n, ts.tokens);
-    assert(pr.type == SuccessfulParse);
-    assert(pr.expr->type == NamedExpressionType);
+    assert(pr.type == PARSE_SUCCESS);
+    assert(pr.expr->type == EXPR_TYPE_SUBEXPR);
     assert(*pr.expr->value.s == '+');
 
     assert(pr.expr->next != NULL);
-    assert(pr.expr->next->type == SubExpressionType);
+    assert(pr.expr->next->type == EXPR_TYPE_SUBEXPR);
     assert(pr.expr->next->subexpr != NULL);
-    assert(pr.expr->next->subexpr->type == NamedExpressionType);
+    assert(pr.expr->next->subexpr->type == EXPR_TYPE_SUBEXPR);
     assert(*pr.expr->next->subexpr->value.s == '-');
     assert(pr.expr->next->subexpr->next->value.i == 5);
     assert(pr.expr->next->subexpr->next->next->value.i == 3);
 
-    assert(pr.expr->next->next->type == IntExpressionType);
+    assert(pr.expr->next->next->type == EXPR_TYPE_INT);
     assert(pr.expr->next->next->value.i == 40);
 
     EvalResult er = eval_expr_list(pr.expr);
-    assert(er.type == SuccessfulEval);
+    assert(er.type == EVAL_SUCCESS);
     assert(er.value.i == 42);
 
     // and nothing changed after evaluation
-    assert(pr.expr->next->type == SubExpressionType);
+    assert(pr.expr->next->type == EXPR_TYPE_SUBEXPR);
     assert(pr.expr->next->subexpr != NULL);
-    assert(pr.expr->next->subexpr->type == NamedExpressionType);
+    assert(pr.expr->next->subexpr->type == EXPR_TYPE_SUBEXPR);
     assert(*pr.expr->next->subexpr->value.s == '-');
     assert(pr.expr->next->subexpr->next->value.i == 5);
     assert(pr.expr->next->subexpr->next->next->value.i == 3);
 
-    assert(pr.expr->next->next->type == IntExpressionType);
+    assert(pr.expr->next->next->type == EXPR_TYPE_INT);
     assert(pr.expr->next->next->value.i == 40);
   }
   my_release();
@@ -468,26 +469,26 @@ int main(int argc, char **argv) {
     }
     EvalResult eval_result = eval(argv[2]);
     switch (eval_result.type) {
-    case SuccessfulEval: {
+    case EVAL_SUCCESS: {
       printf("%d\n", eval_result.value.i);
       goto success_and_clean_up;
     }
-    case TokenizationWhileEvalError:
+    case EVAL_ERROR_TOKENIZATION:
       puts("Error tokenizing expression");
       break;
-    case ParsingWhileEvalError:
+    case EVAL_ERROR_PARSING:
       puts("Error parsing expression");
       break;
-    case NamedExpressionExpectedEvalError:
+    case EVAL_ERROR_NAME_EXPECTED:
       puts("Named expression expected");
       break;
-    case IntegerOrSubExpressionExpectedEvalError:
+    case EVAL_ERROR_NAME_OR_SUBEXPR_EXPECTED:
       puts("Integer or subexpression expected");
       break;
-    case ZeroDivisionEvalError:
+    case EVAL_ERROR_DIVISION_BY_ZERO:
       puts("Division by zero! You are a bad person!");
       break;
-    case UndefinedFunctionEvalError:
+    case EVAL_ERROR_UNDEFINED_FUNCTION:
       puts("Error evaluating expression");
       break;
     }
