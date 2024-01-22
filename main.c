@@ -62,12 +62,9 @@ TokenizerResult tokenize_with_allocator(const char *s, allocator alloc) {
                             .token_list = {.tokens_n = 0, .tokens = NULL}};
 
   MemoryTracker *tmp_tokens = memory_tracker_init(4096);
-  for (size_t char_no = 0; *s != '\0'; ++s, ++char_no) {
+  for (; *s != '\0'; ++s) {
     char c = *s;
     if (isspace(c)) {
-      if (c == '\n') {
-        char_no = 0;
-      }
       continue;
     } else if (c == '-' && isdigit(*(s + 1))) {
       sign = -1;
@@ -83,7 +80,6 @@ TokenizerResult tokenize_with_allocator(const char *s, allocator alloc) {
       sign = 1;
       while (isdigit(*(s + 1))) {
         ++s;
-        ++char_no;
       }
       if (!is_valid_right_limiter_of_name_or_number(*(s + 1))) {
         memory_tracker_release(tmp_tokens);
@@ -98,7 +94,6 @@ TokenizerResult tokenize_with_allocator(const char *s, allocator alloc) {
       const char *position_of_name_beginning = s;
       while (!is_valid_right_limiter_of_name_or_number(*(s + 1))) {
         ++s;
-        ++char_no;
       }
       size_t number_of_chars_in_name = s - position_of_name_beginning + 1;
       char *new_name = alloc(number_of_chars_in_name + 1);
