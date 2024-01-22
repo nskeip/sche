@@ -35,6 +35,11 @@ typedef struct {
   Token *tokens;
 } TokenList;
 
+typedef struct {
+  TokenizerStatus status;
+  TokenList token_list;
+} TokenizerResult;
+
 static bool is_valid_right_limiter_of_name_or_number(char c) {
   // if `c` is the next right of some number or a name, it means
   // that the parsing of the number or name should be finished
@@ -51,12 +56,10 @@ static void my_release_all() { memory_tracker_release(mt); }
 
 typedef void *(*allocator)(size_t);
 
-TokenizerStatus tokenize_with_allocator(const char *s,
-                                        TokenList *out_token_list,
-                                        allocator alloc) {
+TokenizerResult tokenize_with_allocator(const char *s, allocator alloc) {
   int sign = 1;
-  TokenizerStatus result = TOKENIZER_SUCCESS;
-  *out_token_list = (TokenList){.tokens_n = 0, .tokens = NULL};
+  TokenizerResult result = {.status = TOKENIZER_SUCCESS,
+                            .token_list = {.tokens_n = 0, .tokens = NULL}};
 
   MemoryTracker *tmp_tokens = memory_tracker_init(4096);
   for (size_t char_no = 0; *s != '\0'; ++s, ++char_no) {
@@ -73,7 +76,7 @@ TokenizerStatus tokenize_with_allocator(const char *s,
 
     Token *new_token = memory_tracker_push(tmp_tokens, sizeof(Token));
     assert(new_token != NULL);
-    out_token_list->tokens_n++;
+    result.token_list.tokens_n++;
     if (isdigit(c)) {
       new_token->type = TOKEN_TYPE_NUMBER;
       new_token->value.i = sign * atoi(s);
@@ -84,7 +87,8 @@ TokenizerStatus tokenize_with_allocator(const char *s,
       }
       if (!is_valid_right_limiter_of_name_or_number(*(s + 1))) {
         memory_tracker_release(tmp_tokens);
-        return TOKENIZER_ERROR_INVALID_NAME;
+        return (TokenizerResult){.status = TOKENIZER_ERROR_INVALID_NAME,
+                                 .token_list = {.tokens_n = 0, .tokens = NULL}};
       }
     } else if (c == '(') {
       new_token->type = TOKEN_TYPE_PAR_OPEN;
@@ -105,16 +109,16 @@ TokenizerStatus tokenize_with_allocator(const char *s,
       new_token->value.s = new_name;
     }
   }
-  out_token_list->tokens = alloc(sizeof(Token) * out_token_list->tokens_n);
-  for (size_t i = 0; i < out_token_list->tokens_n; ++i) {
-    out_token_list->tokens[i] = *((Token *)tmp_tokens->pointers[i]);
+  result.token_list.tokens = alloc(sizeof(Token) * result.token_list.tokens_n);
+  for (size_t i = 0; i < result.token_list.tokens_n; ++i) {
+    result.token_list.tokens[i] = *((Token *)tmp_tokens->pointers[i]);
   }
   memory_tracker_release(tmp_tokens);
   return result;
 }
 
-TokenizerStatus tokenize(const char *s, TokenList *out_token_list) {
-  return tokenize_with_allocator(s, out_token_list, ALLOCATOR);
+TokenizerResult tokenize(const char *s) {
+  return tokenize_with_allocator(s, ALLOCATOR);
 }
 
 typedef enum {
@@ -288,13 +292,14 @@ EvalResult eval_expr_list(const Expression *expr) {
 }
 
 EvalResult eval(const char *s) {
-  TokenList ts = {0};
-  TokenizerStatus tok_status = tokenize(s, &ts);
+  TokenizerResult tok_result = tokenize(s);
+  TokenizerStatus tok_status = tok_result.status;
   if (tok_status != TOKENIZER_SUCCESS) {
     return (EvalResult){.type = EVAL_ERROR_TOKENIZATION,
                         .tokenizer_error = tok_status};
   }
-  ParserResult pr = parse(ts.tokens_n, ts.tokens);
+  ParserResult pr =
+      parse(tok_result.token_list.tokens_n, tok_result.token_list.tokens);
   if (pr.type != PARSE_SUCCESS) {
     return (EvalResult){.type = EVAL_ERROR_PARSING, .parser_error = pr.type};
   }
@@ -310,77 +315,74 @@ void run_tests(void) {
     memset(many_tokens, '(', test_size - 1);
     many_tokens[test_size - 1] = '\0';
 
-    TokenList ts = {0};
-    TokenizerStatus status = tokenize(many_tokens, &ts);
-    assert(status == TOKENIZER_SUCCESS);
-    assert(ts.tokens_n == 2047);
+    TokenizerResult tok_result = tokenize(many_tokens);
+    assert(tok_result.status == TOKENIZER_SUCCESS);
+    assert(tok_result.token_list.tokens_n == 2047);
   }
   {
-    TokenList ts = {0};
-    TokenizerStatus status = tokenize("(+ -1 20)", &ts);
-    assert(status == TOKENIZER_SUCCESS);
-    assert(ts.tokens_n == 5);
+    TokenizerResult tok_result = tokenize("(+ -1 20)");
+    TokenizerStatus tok_status = tok_result.status;
+    assert(tok_status == TOKENIZER_SUCCESS);
+    assert(tok_result.token_list.tokens_n == 5);
 
-    assert(ts.tokens[0].type == TOKEN_TYPE_PAR_OPEN);
+    assert(tok_result.token_list.tokens[0].type == TOKEN_TYPE_PAR_OPEN);
 
-    assert(ts.tokens[1].type == TOKEN_TYPE_NAME);
-    assert(*ts.tokens[1].value.s == '+');
+    assert(tok_result.token_list.tokens[1].type == TOKEN_TYPE_NAME);
+    assert(*tok_result.token_list.tokens[1].value.s == '+');
 
-    assert(ts.tokens[2].type == TOKEN_TYPE_NUMBER);
-    assert(ts.tokens[2].value.i == -1);
+    assert(tok_result.token_list.tokens[2].type == TOKEN_TYPE_NUMBER);
+    assert(tok_result.token_list.tokens[2].value.i == -1);
 
-    assert(ts.tokens[3].type == TOKEN_TYPE_NUMBER);
-    assert(ts.tokens[3].value.i == 20);
+    assert(tok_result.token_list.tokens[3].type == TOKEN_TYPE_NUMBER);
+    assert(tok_result.token_list.tokens[3].value.i == 20);
 
-    assert(ts.tokens[4].type == TOKEN_TYPE_PAR_CLOSE);
+    assert(tok_result.token_list.tokens[4].type == TOKEN_TYPE_PAR_CLOSE);
   }
   {
-    TokenList ts = {0};
-    TokenizerStatus status = tokenize("99c", &ts);
-    assert(status == TOKENIZER_ERROR_INVALID_NAME);
+    TokenizerResult tok_result = tokenize("99c");
+    assert(tok_result.status == TOKENIZER_ERROR_INVALID_NAME);
   }
   {
-    TokenList ts = {0};
-    TokenizerStatus status = tokenize("e2e4 abc", &ts);
-    assert(status == TOKENIZER_SUCCESS);
-    assert(ts.tokens_n == 2);
+    TokenizerResult tok_result = tokenize("e2e4 abc");
+    assert(tok_result.status == TOKENIZER_SUCCESS);
+    assert(tok_result.token_list.tokens_n == 2);
 
-    assert(ts.tokens[0].type == TOKEN_TYPE_NAME);
-    assert(strncmp(ts.tokens[0].value.s, "e2e4", 4) == 0);
+    assert(tok_result.token_list.tokens[0].type == TOKEN_TYPE_NAME);
+    assert(strncmp(tok_result.token_list.tokens[0].value.s, "e2e4", 4) == 0);
 
-    assert(ts.tokens[1].type == TOKEN_TYPE_NAME);
-    assert(strncmp(ts.tokens[1].value.s, "abc", 3) == 0);
+    assert(tok_result.token_list.tokens[1].type == TOKEN_TYPE_NAME);
+    assert(strncmp(tok_result.token_list.tokens[1].value.s, "abc", 3) == 0);
   }
   {
-    TokenList ts = {0};
-    assert(tokenize("", &ts) == TOKENIZER_SUCCESS);
-    assert(tokenize("my-variable", &ts) == TOKENIZER_SUCCESS);
-    assert(tokenize("*special*", &ts) == TOKENIZER_SUCCESS);
-    assert(tokenize("+special+", &ts) == TOKENIZER_SUCCESS);
-    assert(tokenize("/divide/", &ts) == TOKENIZER_SUCCESS);
-    assert(tokenize("=eq=", &ts) == TOKENIZER_SUCCESS);
-    assert(tokenize("variable_with_underscore", &ts) == TOKENIZER_SUCCESS);
+    assert(tokenize("").status == TOKENIZER_SUCCESS);
+    assert(tokenize("my-variable").status == TOKENIZER_SUCCESS);
+    assert(tokenize("*special*").status == TOKENIZER_SUCCESS);
+    assert(tokenize("+special+").status == TOKENIZER_SUCCESS);
+    assert(tokenize("/divide/").status == TOKENIZER_SUCCESS);
+    assert(tokenize("=eq=").status == TOKENIZER_SUCCESS);
+    assert(tokenize("variable_with_underscore").status == TOKENIZER_SUCCESS);
   }
   {
-    TokenList ts = {0};
-    TokenizerStatus status = tokenize("", &ts);
-    assert(status == TOKENIZER_SUCCESS);
-    assert(ts.tokens_n == 0);
-    assert(parse(ts.tokens_n, ts.tokens).type == PARSE_ERROR_TOO_SHORT_EXPR);
+    TokenizerResult tok_result = tokenize("");
+    assert(tok_result.status == TOKENIZER_SUCCESS);
+    assert(tok_result.token_list.tokens_n == 0);
+    assert(parse(tok_result.token_list.tokens_n, tok_result.token_list.tokens)
+               .type == PARSE_ERROR_TOO_SHORT_EXPR);
   }
   {
-    TokenList ts = {0};
-    TokenizerStatus status = tokenize("()", &ts);
-    assert(status == TOKENIZER_SUCCESS);
-    assert(ts.tokens_n == 2);
-    assert(parse(ts.tokens_n, ts.tokens).type == PARSE_ERROR_TOO_SHORT_EXPR);
+    TokenizerResult tok_result = tokenize("()");
+    assert(tok_result.status == TOKENIZER_SUCCESS);
+    assert(tok_result.token_list.tokens_n == 2);
+    assert(parse(tok_result.token_list.tokens_n, tok_result.token_list.tokens)
+               .type == PARSE_ERROR_TOO_SHORT_EXPR);
   }
   {
-    TokenList ts = {0};
-    TokenizerStatus status = tokenize("(+ 1 2)", &ts);
-    assert(status == TOKENIZER_SUCCESS);
+    TokenizerResult tok_result = tokenize("(+ 1 2)");
+    TokenizerStatus tok_status = tok_result.status;
+    assert(tok_status == TOKENIZER_SUCCESS);
 
-    ParserResult pr = parse(ts.tokens_n, ts.tokens);
+    ParserResult pr =
+        parse(tok_result.token_list.tokens_n, tok_result.token_list.tokens);
     assert(pr.type == PARSE_SUCCESS);
     assert(pr.expr->type == EXPR_TYPE_SUBEXPR);
     assert(strncmp(pr.expr->value.s, "+", 1) == 0);
@@ -402,10 +404,10 @@ void run_tests(void) {
     assert(er.value.i == 42);
   }
   {
-    TokenList ts = {0};
-    TokenizerStatus status = tokenize("(+ (- 5 3) 40)", &ts);
-    assert(status == TOKENIZER_SUCCESS);
-    ParserResult pr = parse(ts.tokens_n, ts.tokens);
+    TokenizerResult tok_result = tokenize("(+ (- 5 3) 40)");
+    assert(tok_result.status == TOKENIZER_SUCCESS);
+    ParserResult pr =
+        parse(tok_result.token_list.tokens_n, tok_result.token_list.tokens);
     assert(pr.type == PARSE_SUCCESS);
     assert(pr.expr->type == EXPR_TYPE_SUBEXPR);
     assert(*pr.expr->value.s == '+');
