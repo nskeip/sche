@@ -1,6 +1,5 @@
 #include "memory_tracker.h"
 #include <assert.h>
-#include <ctype.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -16,7 +15,7 @@ typedef enum {
 
 typedef union {
   const char *s;
-  int i;
+  long num;
 } Value;
 
 typedef struct {
@@ -27,7 +26,8 @@ typedef struct {
 typedef enum {
   TOKENIZER_SUCCESS,
   TOKENIZER_ERROR_TOO_MANY_TOKENS,
-  TOKENIZER_ERROR_INVALID_NAME
+  TOKENIZER_ERROR_INVALID_NAME,
+  TOKENIZER_ERROR_MEMORY_ALLOC
 } TokenizerStatus;
 
 typedef struct {
@@ -40,12 +40,6 @@ typedef struct {
   TokenList token_list;
 } TokenizerResult;
 
-static bool is_valid_right_limiter_of_name_or_number(char c) {
-  // if `c` is the next right of some number or a name, it means
-  // that the parsing of the number or name should be finished
-  return c == '\0' || c == '(' || c == ')' || isspace(c);
-}
-
 static MemoryTracker *mt;
 static void *memory_tracker_allocate(size_t size) {
   return memory_tracker_push(mt, size);
@@ -57,58 +51,55 @@ static void my_release_all() { memory_tracker_release(mt); }
 typedef void *(*allocator)(size_t);
 
 TokenizerResult tokenize_with_allocator(const char *s, allocator alloc) {
-  int sign = 1;
   TokenizerResult result = {.status = TOKENIZER_SUCCESS,
                             .token_list = {.tokens_n = 0, .tokens = NULL}};
 
+  char *token, *string, *tofree;
+  tofree = string = strdup(s);
+  assert(tofree != NULL);
+
   MemoryTracker *tmp_tokens = memory_tracker_init(4096);
-  for (; *s != '\0'; ++s) {
-    char c = *s;
-    if (isspace(c)) {
-      continue;
-    } else if (c == '-' && isdigit(*(s + 1))) {
-      sign = -1;
-      continue;
-    }
+  while ((token = strsep(&string, " \t\r\n()")) != NULL) {
+    if (*token != '\0') {
+      ++result.token_list.tokens_n;
+      Token *new_token = memory_tracker_push(tmp_tokens, sizeof(Token));
+      assert(new_token != NULL);
+      if (*token == '(' || *token == ')') {
+        new_token->type =
+            (*token == '(') ? TOKEN_TYPE_PAR_OPEN : TOKEN_TYPE_PAR_CLOSE;
+        continue;
+      }
 
-    Token *new_token = memory_tracker_push(tmp_tokens, sizeof(Token));
-    assert(new_token != NULL);
-    result.token_list.tokens_n++;
-    if (isdigit(c)) {
-      new_token->type = TOKEN_TYPE_NUMBER;
-      new_token->value.i = sign * atoi(s);
-      sign = 1;
-      while (isdigit(*(s + 1))) {
-        ++s;
-      }
-      if (!is_valid_right_limiter_of_name_or_number(*(s + 1))) {
-        memory_tracker_release(tmp_tokens);
-        return (TokenizerResult){.status = TOKENIZER_ERROR_INVALID_NAME,
-                                 .token_list = {.tokens_n = 0, .tokens = NULL}};
-      }
-    } else if (c == '(') {
-      new_token->type = TOKEN_TYPE_PAR_OPEN;
-    } else if (c == ')') {
-      new_token->type = TOKEN_TYPE_PAR_CLOSE;
-    } else {
-      const char *position_of_name_beginning = s;
-      while (!is_valid_right_limiter_of_name_or_number(*(s + 1))) {
-        ++s;
-      }
-      size_t number_of_chars_in_name = s - position_of_name_beginning + 1;
-      char *new_name = alloc(number_of_chars_in_name + 1);
-      strncpy(new_name, position_of_name_beginning, number_of_chars_in_name);
-      new_name[number_of_chars_in_name] = '\0';
+      char *end_of_number = NULL;
+      long number = strtol(token, &end_of_number, 0);
 
-      new_token->type = TOKEN_TYPE_NAME;
-      new_token->value.s = new_name;
+      if (end_of_number != NULL && *end_of_number == '\0') { // digits only
+        new_token->type = TOKEN_TYPE_NUMBER;
+        new_token->value.num = number;
+      } else if (end_of_number != NULL &&
+                 *end_of_number != '\0') { // digits + non-digits
+        result.status = TOKENIZER_ERROR_INVALID_NAME;
+        goto cleanup;
+      } else if (end_of_number == token) { // no digits, non-digits + digits
+        new_token->type = TOKEN_TYPE_NAME;
+        size_t token_len = strlen(token);
+        char *copy_of_token = alloc(token_len + 1);
+        assert(copy_of_token != NULL);
+        strncpy(copy_of_token, token, token_len);
+        copy_of_token[token_len] = '\0';
+        new_token->value.s = copy_of_token;
+      } else {
+        assert(false);
+      }
     }
   }
   result.token_list.tokens = alloc(sizeof(Token) * result.token_list.tokens_n);
   for (size_t i = 0; i < result.token_list.tokens_n; ++i) {
     result.token_list.tokens[i] = *((Token *)tmp_tokens->pointers[i]);
   }
+cleanup:
   memory_tracker_release(tmp_tokens);
+  free(tofree);
   return result;
 }
 
@@ -158,7 +149,7 @@ ParserResult parse_with_allocator(size_t tokens_n, const Token tokens[],
     switch (tokens[i].type) {
     case TOKEN_TYPE_NUMBER:
       current_expr->type = EXPR_TYPE_INT;
-      current_expr->value.i = tokens[i].value.i;
+      current_expr->value.num = tokens[i].value.num;
       break;
     case TOKEN_TYPE_NAME:
       current_expr->type = EXPR_TYPE_SUBEXPR;
@@ -235,26 +226,26 @@ EvalResult eval_expr_list(const Expression *expr) {
 
   int a;
   if (expr->next->type == EXPR_TYPE_INT) {
-    a = expr->next->value.i;
+    a = expr->next->value.num;
   } else if (expr->next->type == EXPR_TYPE_SUBEXPR) {
     EvalResult subexpr_eval_result = eval_expr_list(expr->next->subexpr);
     if (subexpr_eval_result.type != EVAL_SUCCESS) {
       return subexpr_eval_result;
     }
-    a = subexpr_eval_result.value.i;
+    a = subexpr_eval_result.value.num;
   } else {
     return (EvalResult){.type = EVAL_ERROR_NAME_OR_SUBEXPR_EXPECTED};
   }
 
   int b;
   if (expr->next->next->type == EXPR_TYPE_INT) {
-    b = expr->next->next->value.i;
+    b = expr->next->next->value.num;
   } else if (expr->next->next->type == EXPR_TYPE_SUBEXPR) {
     EvalResult subexpr_eval_result = eval_expr_list(expr->next->next->subexpr);
     if (subexpr_eval_result.type != EVAL_SUCCESS) {
       return subexpr_eval_result;
     }
-    b = subexpr_eval_result.value.i;
+    b = subexpr_eval_result.value.num;
   } else {
     return (EvalResult){.type = EVAL_ERROR_NAME_OR_SUBEXPR_EXPECTED};
   }
@@ -262,23 +253,23 @@ EvalResult eval_expr_list(const Expression *expr) {
   EvalResult result = {.type = EVAL_SUCCESS};
   switch (*expr->value.s) {
   case '+':
-    result.value.i = a + b;
+    result.value.num = a + b;
     break;
   case '-':
-    result.value.i = a - b;
+    result.value.num = a - b;
     break;
   case '*':
-    result.value.i = a * b;
+    result.value.num = a * b;
     break;
   case '/': {
     if (b == 0) {
       return (EvalResult){.type = EVAL_ERROR_DIVISION_BY_ZERO};
     }
-    result.value.i = a / b;
+    result.value.num = a / b;
     break;
   }
   case '%':
-    result.value.i = a % b;
+    result.value.num = a % b;
     break;
   default:
     return (EvalResult){.type = EVAL_ERROR_UNDEFINED_FUNCTION};
@@ -326,10 +317,10 @@ void run_tests(void) {
     assert(*tok_result.token_list.tokens[1].value.s == '+');
 
     assert(tok_result.token_list.tokens[2].type == TOKEN_TYPE_NUMBER);
-    assert(tok_result.token_list.tokens[2].value.i == -1);
+    assert(tok_result.token_list.tokens[2].value.num == -1);
 
     assert(tok_result.token_list.tokens[3].type == TOKEN_TYPE_NUMBER);
-    assert(tok_result.token_list.tokens[3].value.i == 20);
+    assert(tok_result.token_list.tokens[3].value.num == 20);
 
     assert(tok_result.token_list.tokens[4].type == TOKEN_TYPE_PAR_CLOSE);
   }
@@ -383,20 +374,20 @@ void run_tests(void) {
     assert(strncmp(pr.expr->value.s, "+", 1) == 0);
 
     assert(pr.expr->next->type == EXPR_TYPE_INT);
-    assert(pr.expr->next->value.i == 1);
+    assert(pr.expr->next->value.num == 1);
 
     assert(pr.expr->next->next->type == EXPR_TYPE_INT);
-    assert(pr.expr->next->next->value.i == 2);
+    assert(pr.expr->next->next->value.num == 2);
     assert(pr.expr->next->next->next == NULL);
 
     EvalResult er = eval_expr_list(pr.expr);
     assert(er.type == EVAL_SUCCESS);
-    assert(er.value.i == 3);
+    assert(er.value.num == 3);
   }
   {
     EvalResult er = eval("(+ 22 20)");
     assert(er.type == EVAL_SUCCESS);
-    assert(er.value.i == 42);
+    assert(er.value.num == 42);
   }
   {
     TokenizerResult tok_result = tokenize("(+ (- 5 3) 40)");
@@ -412,26 +403,26 @@ void run_tests(void) {
     assert(pr.expr->next->subexpr != NULL);
     assert(pr.expr->next->subexpr->type == EXPR_TYPE_SUBEXPR);
     assert(*pr.expr->next->subexpr->value.s == '-');
-    assert(pr.expr->next->subexpr->next->value.i == 5);
-    assert(pr.expr->next->subexpr->next->next->value.i == 3);
+    assert(pr.expr->next->subexpr->next->value.num == 5);
+    assert(pr.expr->next->subexpr->next->next->value.num == 3);
 
     assert(pr.expr->next->next->type == EXPR_TYPE_INT);
-    assert(pr.expr->next->next->value.i == 40);
+    assert(pr.expr->next->next->value.num == 40);
 
     EvalResult er = eval_expr_list(pr.expr);
     assert(er.type == EVAL_SUCCESS);
-    assert(er.value.i == 42);
+    assert(er.value.num == 42);
 
     // and nothing changed after evaluation
     assert(pr.expr->next->type == EXPR_TYPE_SUBEXPR);
     assert(pr.expr->next->subexpr != NULL);
     assert(pr.expr->next->subexpr->type == EXPR_TYPE_SUBEXPR);
     assert(*pr.expr->next->subexpr->value.s == '-');
-    assert(pr.expr->next->subexpr->next->value.i == 5);
-    assert(pr.expr->next->subexpr->next->next->value.i == 3);
+    assert(pr.expr->next->subexpr->next->value.num == 5);
+    assert(pr.expr->next->subexpr->next->next->value.num == 3);
 
     assert(pr.expr->next->next->type == EXPR_TYPE_INT);
-    assert(pr.expr->next->next->value.i == 40);
+    assert(pr.expr->next->next->value.num == 40);
   }
   DEALLOCATOR();
   printf("\x1b[32m"); // green text
@@ -484,7 +475,7 @@ int main(int argc, char **argv) {
     EvalResult eval_result = eval(argv[2]);
     switch (eval_result.type) {
     case EVAL_SUCCESS: {
-      printf("%d\n", eval_result.value.i);
+      printf("%ld\n", eval_result.value.num);
       goto success_and_clean_up;
     }
     case EVAL_ERROR_TOKENIZATION:
