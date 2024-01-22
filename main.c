@@ -42,10 +42,18 @@ static bool is_valid_right_limiter_of_name_or_number(char c) {
 }
 
 static MemoryTracker *mt;
-static void *my_allocate(size_t size) { return memory_tracker_push(mt, size); }
-static void my_release() { memory_tracker_release(mt); }
+static void *memory_tracker_allocate(size_t size) {
+  return memory_tracker_push(mt, size);
+}
+static void my_release_all() { memory_tracker_release(mt); }
+#define ALLOCATOR memory_tracker_allocate
+#define DEALLOCATOR my_release_all
 
-TokenizerStatus tokenize(const char *s, TokenList *out_token_list) {
+typedef void *(*allocator)(size_t);
+
+TokenizerStatus tokenize_with_allocator(const char *s,
+                                        TokenList *out_token_list,
+                                        allocator alloc) {
   int sign = 1;
   TokenizerStatus result = TOKENIZER_SUCCESS;
   *out_token_list = (TokenList){.tokens_n = 0, .tokens = NULL};
@@ -89,7 +97,7 @@ TokenizerStatus tokenize(const char *s, TokenList *out_token_list) {
         ++char_no;
       }
       size_t number_of_chars_in_name = s - position_of_name_beginning + 1;
-      char *new_name = my_allocate(number_of_chars_in_name + 1);
+      char *new_name = alloc(number_of_chars_in_name + 1);
       strncpy(new_name, position_of_name_beginning, number_of_chars_in_name);
       new_name[number_of_chars_in_name] = '\0';
 
@@ -97,13 +105,16 @@ TokenizerStatus tokenize(const char *s, TokenList *out_token_list) {
       new_token->value.s = new_name;
     }
   }
-  out_token_list->tokens =
-      my_allocate(sizeof(Token) * out_token_list->tokens_n);
+  out_token_list->tokens = alloc(sizeof(Token) * out_token_list->tokens_n);
   for (size_t i = 0; i < out_token_list->tokens_n; ++i) {
     out_token_list->tokens[i] = *((Token *)tmp_tokens->pointers[i]);
   }
   memory_tracker_release(tmp_tokens);
   return result;
+}
+
+TokenizerStatus tokenize(const char *s, TokenList *out_token_list) {
+  return tokenize_with_allocator(s, out_token_list, ALLOCATOR);
 }
 
 typedef enum {
@@ -132,7 +143,8 @@ typedef struct {
   Expression *expr;
 } ParserResult;
 
-ParserResult parse(size_t tokens_n, const Token tokens[]) {
+ParserResult parse_with_allocator(size_t tokens_n, const Token tokens[],
+                                  allocator alloc) {
   if (tokens_n > 0 && (tokens[0].type != TOKEN_TYPE_PAR_OPEN ||
                        tokens[tokens_n - 1].type != TOKEN_TYPE_PAR_CLOSE)) {
     return (ParserResult){.type = PARSE_ERROR_UNBALANCED_PAR, .expr = NULL};
@@ -140,7 +152,7 @@ ParserResult parse(size_t tokens_n, const Token tokens[]) {
   if (tokens_n < 3) {
     return (ParserResult){.type = PARSE_ERROR_TOO_SHORT_EXPR, .expr = NULL};
   }
-  Expression *const first_expr = my_allocate(sizeof(Expression));
+  Expression *const first_expr = alloc(sizeof(Expression));
   Expression *current_expr = first_expr;
   const size_t idx_of_closing_par = tokens_n - 1;
   for (size_t i = 1; i < idx_of_closing_par; ++i) {
@@ -168,7 +180,8 @@ ParserResult parse(size_t tokens_n, const Token tokens[]) {
           ++subexpr_tokens_n;
         }
       }
-      ParserResult subexpr_parse_result = parse(subexpr_tokens_n, tokens + i);
+      ParserResult subexpr_parse_result =
+          parse_with_allocator(subexpr_tokens_n, tokens + i, alloc);
       if (subexpr_parse_result.type != PARSE_SUCCESS) {
         return (ParserResult){.type = subexpr_parse_result.type, .expr = NULL};
       }
@@ -182,12 +195,16 @@ ParserResult parse(size_t tokens_n, const Token tokens[]) {
 
     const bool we_have_some_tokens_left = i != idx_of_closing_par - 1;
     if (we_have_some_tokens_left) {
-      current_expr->next = my_allocate(sizeof(Expression));
+      current_expr->next = alloc(sizeof(Expression));
       current_expr = current_expr->next;
       current_expr->next = NULL;
     }
   }
   return (ParserResult){.type = PARSE_SUCCESS, .expr = first_expr};
+}
+
+ParserResult parse(size_t tokens_n, const Token tokens[]) {
+  return parse_with_allocator(tokens_n, tokens, ALLOCATOR);
 }
 
 typedef enum {
@@ -419,7 +436,7 @@ void run_tests(void) {
     assert(pr.expr->next->next->type == EXPR_TYPE_INT);
     assert(pr.expr->next->next->value.i == 40);
   }
-  my_release();
+  DEALLOCATOR();
   printf("\x1b[32m"); // green text
   printf("\u2713 ");  // Unicode check mark
   printf("\x1b[0m");  // Reset text color to default
