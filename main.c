@@ -233,7 +233,7 @@ EvalResult eval_expr_list(const Expression *expr) {
     }
   }
 
-  int a;
+  long a;
   if (expr->next->type == EXPR_TYPE_INT) {
     a = expr->next->value.num;
   } else if (expr->next->type == EXPR_TYPE_SUBEXPR) {
@@ -246,7 +246,7 @@ EvalResult eval_expr_list(const Expression *expr) {
     return (EvalResult){.type = EVAL_ERROR_NAME_OR_SUBEXPR_EXPECTED};
   }
 
-  int b;
+  long b;
   if (expr->next->next->type == EXPR_TYPE_INT) {
     b = expr->next->next->value.num;
   } else if (expr->next->next->type == EXPR_TYPE_SUBEXPR) {
@@ -394,9 +394,14 @@ void run_tests(void) {
     assert(er.value.num == 3);
   }
   {
-    EvalResult er = eval("(+ 22 20)");
+    EvalResult er = eval("(- 0777 0555)");
     assert(er.type == EVAL_SUCCESS);
-    assert(er.value.num == 42);
+    assert(er.value.num == 146);
+  }
+  {
+    EvalResult er = eval("(+ 0xdead0000 0xbeef)");
+    assert(er.type == EVAL_SUCCESS);
+    assert(er.value.num == 0xdeadbeef);
   }
   {
     TokenizerResult tok_result = tokenize("(+ (- 5 3) 40)");
