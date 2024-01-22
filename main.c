@@ -59,14 +59,15 @@ TokenizerResult tokenize_with_allocator(const char *s, allocator alloc) {
   assert(tofree != NULL);
 
   MemoryTracker *tmp_tokens = memory_tracker_init(4096);
-  while ((token = strsep(&string, " \t\r\n()")) != NULL) {
-    if (*token != '\0') {
+  while ((token = strsep(&string, " \t\r\n")) != NULL) { // code by words
+    while (*token != '\0') {                             // word by characters
       ++result.token_list.tokens_n;
       Token *new_token = memory_tracker_push(tmp_tokens, sizeof(Token));
       assert(new_token != NULL);
       if (*token == '(' || *token == ')') {
         new_token->type =
             (*token == '(') ? TOKEN_TYPE_PAR_OPEN : TOKEN_TYPE_PAR_CLOSE;
+        ++token;
         continue;
       }
 
@@ -76,10 +77,7 @@ TokenizerResult tokenize_with_allocator(const char *s, allocator alloc) {
       if (end_of_number != NULL && *end_of_number == '\0') { // digits only
         new_token->type = TOKEN_TYPE_NUMBER;
         new_token->value.num = number;
-      } else if (end_of_number != NULL &&
-                 *end_of_number != '\0') { // digits + non-digits
-        result.status = TOKENIZER_ERROR_INVALID_NAME;
-        goto cleanup;
+        break;
       } else if (end_of_number == token) { // no digits, non-digits + digits
         new_token->type = TOKEN_TYPE_NAME;
         size_t token_len = strlen(token);
@@ -88,6 +86,17 @@ TokenizerResult tokenize_with_allocator(const char *s, allocator alloc) {
         strncpy(copy_of_token, token, token_len);
         copy_of_token[token_len] = '\0';
         new_token->value.s = copy_of_token;
+        break;
+      } else if (end_of_number != NULL &&
+                 *end_of_number != '\0') { // digits + non-digits
+        if (end_of_number == strpbrk(token, "()")) {
+          new_token->type = TOKEN_TYPE_NUMBER;
+          new_token->value.num = number;
+          token = end_of_number;
+        } else {
+          result.status = TOKENIZER_ERROR_INVALID_NAME;
+          goto cleanup;
+        }
       } else {
         assert(false);
       }
