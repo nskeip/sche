@@ -225,6 +225,14 @@ typedef struct {
   };
 } EvalResult;
 
+static inline const Expression *exp_get_nth(const Expression *expr, size_t n) {
+  assert(expr != NULL);
+  while (0 < n--) {
+    expr = expr->next;
+  }
+  return expr;
+}
+
 EvalResult eval_expr_list(const Expression *expr) {
   {
     bool expression_begins_with_name = expr->type == EXPR_TYPE_SUBEXPR;
@@ -233,32 +241,24 @@ EvalResult eval_expr_list(const Expression *expr) {
     }
   }
 
-  long a;
-  if (expr->next->type == EXPR_TYPE_INT) {
-    a = expr->next->value.num;
-  } else if (expr->next->type == EXPR_TYPE_SUBEXPR) {
-    EvalResult subexpr_eval_result = eval_expr_list(expr->next->subexpr);
-    if (subexpr_eval_result.type != EVAL_SUCCESS) {
-      return subexpr_eval_result;
+  long args[2];
+  for (size_t i = 0; i < sizeof(args) / sizeof(args[0]); ++i) {
+    const Expression *arg = exp_get_nth(expr, i + 1);
+    if (arg->type == EXPR_TYPE_INT) {
+      args[i] = arg->value.num;
+    } else if (arg->type == EXPR_TYPE_SUBEXPR) {
+      EvalResult subexpr_eval_result = eval_expr_list(arg->subexpr);
+      if (subexpr_eval_result.type != EVAL_SUCCESS) {
+        return subexpr_eval_result;
+      }
+      args[i] = subexpr_eval_result.value.num;
+    } else {
+      return (EvalResult){.type = EVAL_ERROR_NAME_OR_SUBEXPR_EXPECTED};
     }
-    a = subexpr_eval_result.value.num;
-  } else {
-    return (EvalResult){.type = EVAL_ERROR_NAME_OR_SUBEXPR_EXPECTED};
   }
 
-  long b;
-  if (expr->next->next->type == EXPR_TYPE_INT) {
-    b = expr->next->next->value.num;
-  } else if (expr->next->next->type == EXPR_TYPE_SUBEXPR) {
-    EvalResult subexpr_eval_result = eval_expr_list(expr->next->next->subexpr);
-    if (subexpr_eval_result.type != EVAL_SUCCESS) {
-      return subexpr_eval_result;
-    }
-    b = subexpr_eval_result.value.num;
-  } else {
-    return (EvalResult){.type = EVAL_ERROR_NAME_OR_SUBEXPR_EXPECTED};
-  }
-
+  long a = args[0];
+  long b = args[1];
   EvalResult result = {.type = EVAL_SUCCESS};
   switch (*expr->value.s) {
   case '+':
