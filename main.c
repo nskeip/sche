@@ -212,7 +212,8 @@ typedef enum {
   EVAL_ERROR_PARSING,
   EVAL_ERROR_NAME_EXPECTED,
   EVAL_ERROR_NAME_OR_SUBEXPR_EXPECTED,
-  EVAL_ERROR_DIVISION_BY_ZERO,
+  EVAL_ERROR_MEMORY_ALLOC,
+  EVAL_ERROR_WRONG_ARGS_N,
   EVAL_ERROR_UNDEFINED_FUNCTION
 } EvalResultType;
 
@@ -233,6 +234,71 @@ static inline const Expression *exp_get_nth(const Expression *expr, size_t n) {
   return expr;
 }
 
+static size_t exp_list_len(const Expression *expr) {
+  size_t len = 0;
+  while (expr != NULL) {
+    ++len;
+    expr = expr->next;
+  }
+  return len;
+}
+
+typedef struct {
+  const char *name;
+  const int min_args_n;
+  const int max_args_n;
+  long (*const run)(size_t args_n, const long *args);
+} Function;
+
+long f_add(size_t args_n, const long *args) {
+  long sum = 0;
+  for (size_t i = 0; i < args_n; ++i) {
+    sum += args[i];
+  }
+  return sum;
+}
+
+long f_sub(size_t args_n, const long *args) {
+  (void)(args_n);
+  return args[0] - args[1];
+}
+
+long f_mul(size_t args_n, const long *args) {
+  long product = 1;
+  for (size_t i = 0; i < args_n; ++i) {
+    product *= args[i];
+  }
+  return product;
+}
+
+long f_div(size_t args_n, const long *args) {
+  (void)(args_n);
+  if (args[1] == 0) {
+    fprintf(stderr, "Division by zero\n");
+    assert(false);
+  }
+  return args[0] / args[1];
+}
+
+long f_rem(size_t args_n, const long *args) {
+  (void)(args_n);
+  if (args[1] == 0) {
+    fprintf(stderr, "Division by zero\n");
+    assert(false);
+  }
+  return args[0] % args[1];
+}
+
+const Function functions[] = {
+    // clang-format off
+  {.name = "+", .min_args_n = 2, .max_args_n = -1, .run = f_add},
+  {.name = "-", .min_args_n = 2, .max_args_n =  2, .run = f_sub},
+  {.name = "*", .min_args_n = 2, .max_args_n = -1, .run = f_mul},
+  {.name = "/", .min_args_n = 2, .max_args_n =  2, .run = f_div},
+  {.name = "%", .min_args_n = 2, .max_args_n =  2, .run = f_rem}
+    // clang-format on
+};
+
 EvalResult eval_expr_list(const Expression *expr) {
   {
     bool expression_begins_with_name = expr->type == EXPR_TYPE_SUBEXPR;
@@ -241,48 +307,51 @@ EvalResult eval_expr_list(const Expression *expr) {
     }
   }
 
-  long args[2];
-  for (size_t i = 0; i < sizeof(args) / sizeof(args[0]); ++i) {
+  const char *name = expr->value.s;
+  const Function *f = NULL;
+  for (size_t i = 0; i < sizeof(functions) / sizeof(functions[0]); ++i) {
+    if (strcmp(name, functions[i].name) == 0) {
+      f = &functions[i];
+      break;
+    }
+  }
+
+  if (f == NULL) {
+    return (EvalResult){.type = EVAL_ERROR_UNDEFINED_FUNCTION};
+  }
+
+  const int args_n = exp_list_len(expr) - 1;
+  if (args_n < 0 || args_n < f->min_args_n ||
+      (f->max_args_n != -1 && args_n > f->max_args_n)) {
+    fprintf(stderr, "Wrong number of arguments for function %s\n", name);
+    return (EvalResult){.type = EVAL_ERROR_WRONG_ARGS_N};
+  }
+
+  long *args = malloc(sizeof(long) * args_n);
+  if (args == NULL) {
+    return (EvalResult){.type = EVAL_ERROR_MEMORY_ALLOC};
+  }
+
+  EvalResult result = {.type = EVAL_SUCCESS};
+  for (int i = 0; i < args_n; ++i) {
     const Expression *arg = exp_get_nth(expr, i + 1);
     if (arg->type == EXPR_TYPE_INT) {
       args[i] = arg->value.num;
     } else if (arg->type == EXPR_TYPE_SUBEXPR) {
       EvalResult subexpr_eval_result = eval_expr_list(arg->subexpr);
       if (subexpr_eval_result.type != EVAL_SUCCESS) {
-        return subexpr_eval_result;
+        result = subexpr_eval_result;
+        goto cleanup;
       }
       args[i] = subexpr_eval_result.value.num;
     } else {
-      return (EvalResult){.type = EVAL_ERROR_NAME_OR_SUBEXPR_EXPECTED};
+      result = (EvalResult){.type = EVAL_ERROR_NAME_OR_SUBEXPR_EXPECTED};
+      goto cleanup;
     }
   }
-
-  long a = args[0];
-  long b = args[1];
-  EvalResult result = {.type = EVAL_SUCCESS};
-  switch (*expr->value.s) {
-  case '+':
-    result.value.num = a + b;
-    break;
-  case '-':
-    result.value.num = a - b;
-    break;
-  case '*':
-    result.value.num = a * b;
-    break;
-  case '/': {
-    if (b == 0) {
-      return (EvalResult){.type = EVAL_ERROR_DIVISION_BY_ZERO};
-    }
-    result.value.num = a / b;
-    break;
-  }
-  case '%':
-    result.value.num = a % b;
-    break;
-  default:
-    return (EvalResult){.type = EVAL_ERROR_UNDEFINED_FUNCTION};
-  }
+  result.value.num = f->run(args_n, args);
+cleanup:
+  free(args);
   return result;
 }
 
@@ -404,7 +473,7 @@ void run_tests(void) {
     assert(er.value.num == 0xdeadbeef);
   }
   {
-    TokenizerResult tok_result = tokenize("(+ (- 5 3) 40)");
+    TokenizerResult tok_result = tokenize("(+ (- 5 4) 40 1)");
     assert(tok_result.status == TOKENIZER_SUCCESS);
     ParserResult pr =
         parse(tok_result.token_list.tokens_n, tok_result.token_list.tokens);
@@ -418,10 +487,14 @@ void run_tests(void) {
     assert(pr.expr->next->subexpr->type == EXPR_TYPE_SUBEXPR);
     assert(*pr.expr->next->subexpr->value.s == '-');
     assert(pr.expr->next->subexpr->next->value.num == 5);
-    assert(pr.expr->next->subexpr->next->next->value.num == 3);
+    assert(pr.expr->next->subexpr->next->next->value.num == 4);
+    assert(pr.expr->next->subexpr->next->next->next == NULL);
 
     assert(pr.expr->next->next->type == EXPR_TYPE_INT);
     assert(pr.expr->next->next->value.num == 40);
+    assert(pr.expr->next->next->next->type == EXPR_TYPE_INT);
+    assert(pr.expr->next->next->next->value.num == 1);
+    assert(pr.expr->next->next->next->next == NULL);
 
     EvalResult er = eval_expr_list(pr.expr);
     assert(er.type == EVAL_SUCCESS);
@@ -433,10 +506,12 @@ void run_tests(void) {
     assert(pr.expr->next->subexpr->type == EXPR_TYPE_SUBEXPR);
     assert(*pr.expr->next->subexpr->value.s == '-');
     assert(pr.expr->next->subexpr->next->value.num == 5);
-    assert(pr.expr->next->subexpr->next->next->value.num == 3);
+    assert(pr.expr->next->subexpr->next->next->value.num == 4);
 
     assert(pr.expr->next->next->type == EXPR_TYPE_INT);
     assert(pr.expr->next->next->value.num == 40);
+    assert(pr.expr->next->next->next->type == EXPR_TYPE_INT);
+    assert(pr.expr->next->next->next->value.num == 1);
   }
   DEALLOCATOR();
   printf("\x1b[32m"); // green text
@@ -501,11 +576,14 @@ int main(int argc, char **argv) {
     case EVAL_ERROR_NAME_EXPECTED:
       puts("Named expression expected");
       break;
+    case EVAL_ERROR_WRONG_ARGS_N:
+      puts("Wrong number of arguments");
+      break;
+    case EVAL_ERROR_MEMORY_ALLOC:
+      puts("Memory allocation error during evaluation");
+      break;
     case EVAL_ERROR_NAME_OR_SUBEXPR_EXPECTED:
       puts("Integer or subexpression expected");
-      break;
-    case EVAL_ERROR_DIVISION_BY_ZERO:
-      puts("Division by zero! You are a bad person!");
       break;
     case EVAL_ERROR_UNDEFINED_FUNCTION:
       puts("Error evaluating expression");

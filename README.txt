@@ -30,5 +30,5 @@ Roadmap:
 [x] Make a usable calculator.
 [x] Add 0xdeadbeef and 0777 :)
 [x] Add nesting to the parser.
-[ ] Add n-variable functions.
+[x] Add n-variable functions.
 [ ] ...
