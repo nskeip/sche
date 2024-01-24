@@ -51,8 +51,10 @@ static void my_release_all() { memory_tracker_release(mt); }
 typedef void *(*allocator)(size_t);
 
 TokenizerResult tokenize_with_allocator(const char *s, allocator alloc) {
-  TokenizerResult result = {.status = TOKENIZER_SUCCESS,
-                            .token_list = {.tokens_n = 0, .tokens = NULL}};
+  TokenizerResult result = {
+      .status = TOKENIZER_SUCCESS,
+      .token_list = {.tokens_n = 0, .tokens = NULL}
+  };
 
   char *token, *string, *tofree;
   tofree = string = strdup(s);
@@ -88,7 +90,8 @@ TokenizerResult tokenize_with_allocator(const char *s, allocator alloc) {
         new_token->value.s = copy_of_token;
         break;
       } else if (end_of_number != NULL &&
-                 *end_of_number != '\0') { // digits + non-digits
+                 *end_of_number != '\0') { // digits +
+                                           // non-digits
         if (end_of_number == strpbrk(token, "()")) {
           new_token->type = TOKEN_TYPE_NUMBER;
           new_token->value.num = number;
@@ -290,13 +293,11 @@ long f_rem(size_t args_n, const long *args) {
 }
 
 const Function functions[] = {
-    // clang-format off
-  {.name = "+", .min_args_n = 2, .max_args_n = -1, .run = f_add},
-  {.name = "-", .min_args_n = 2, .max_args_n =  2, .run = f_sub},
-  {.name = "*", .min_args_n = 2, .max_args_n = -1, .run = f_mul},
-  {.name = "/", .min_args_n = 2, .max_args_n =  2, .run = f_div},
-  {.name = "%", .min_args_n = 2, .max_args_n =  2, .run = f_rem},
-    // clang-format on
+    {.name = "+", .min_args_n = 2, .max_args_n = -1, .run = f_add},
+    {.name = "-", .min_args_n = 2, .max_args_n = 2,  .run = f_sub},
+    {.name = "*", .min_args_n = 2, .max_args_n = -1, .run = f_mul},
+    {.name = "/", .min_args_n = 2, .max_args_n = 2,  .run = f_div},
+    {.name = "%", .min_args_n = 2, .max_args_n = 2,  .run = f_rem},
 };
 
 EvalResult eval_expr_list(const Expression *expr) {

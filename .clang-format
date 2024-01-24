@@ -1,0 +1,4 @@
+---
+AlignArrayOfStructures: Left
+BinPackArguments: false
+InsertTrailingCommas: Wrapped
