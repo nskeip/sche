@@ -10,7 +10,7 @@ typedef enum {
   TOKEN_TYPE_NUMBER,
   TOKEN_TYPE_NAME,
   TOKEN_TYPE_PAR_OPEN,
-  TOKEN_TYPE_PAR_CLOSE
+  TOKEN_TYPE_PAR_CLOSE,
 } TokenType;
 
 typedef union {
@@ -27,7 +27,7 @@ typedef enum {
   TOKENIZER_SUCCESS,
   TOKENIZER_ERROR_TOO_MANY_TOKENS,
   TOKENIZER_ERROR_INVALID_NAME,
-  TOKENIZER_ERROR_MEMORY_ALLOC
+  TOKENIZER_ERROR_MEMORY_ALLOC,
 } TokenizerStatus;
 
 typedef struct {
@@ -119,7 +119,7 @@ TokenizerResult tokenize(const char *s) {
 typedef enum {
   EXPR_TYPE_NAME,
   EXPR_TYPE_INT,
-  EXPR_TYPE_SUBEXPR
+  EXPR_TYPE_SUBEXPR,
 } ExpressionType;
 
 typedef struct Expression {
@@ -134,7 +134,7 @@ typedef struct Expression {
 typedef enum {
   PARSE_SUCCESS,
   PARSE_ERROR_TOO_SHORT_EXPR,
-  PARSE_ERROR_UNBALANCED_PAR
+  PARSE_ERROR_UNBALANCED_PAR,
 } ParserResultType;
 
 typedef struct {
@@ -214,7 +214,7 @@ typedef enum {
   EVAL_ERROR_NAME_OR_SUBEXPR_EXPECTED,
   EVAL_ERROR_MEMORY_ALLOC,
   EVAL_ERROR_WRONG_ARGS_N,
-  EVAL_ERROR_UNDEFINED_FUNCTION
+  EVAL_ERROR_UNDEFINED_FUNCTION,
 } EvalResultType;
 
 typedef struct {
@@ -295,7 +295,7 @@ const Function functions[] = {
   {.name = "-", .min_args_n = 2, .max_args_n =  2, .run = f_sub},
   {.name = "*", .min_args_n = 2, .max_args_n = -1, .run = f_mul},
   {.name = "/", .min_args_n = 2, .max_args_n =  2, .run = f_div},
-  {.name = "%", .min_args_n = 2, .max_args_n =  2, .run = f_rem}
+  {.name = "%", .min_args_n = 2, .max_args_n =  2, .run = f_rem},
     // clang-format on
 };
 
