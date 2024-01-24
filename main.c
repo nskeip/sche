@@ -578,7 +578,7 @@ int main(int argc, char **argv) {
       puts("Named expression expected");
       break;
     case EVAL_ERROR_WRONG_ARGS_N:
-      puts("Wrong number of arguments");
+      puts("Wrong number of arguments (you probably noticed, don't you?)");
       break;
     case EVAL_ERROR_MEMORY_ALLOC:
       puts("Memory allocation error during evaluation");
