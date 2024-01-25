@@ -31,4 +31,9 @@ Roadmap:
 [x] Add 0xdeadbeef and 0777 :)
 [x] Add nesting to the parser.
 [x] Add n-variable functions.
+[ ] Running code from a file.
+[ ] User defined functions.
+[ ] Useful data types:
+  [ ] Real numbers support.
+  [ ] Big numbers support.
 [ ] ...
