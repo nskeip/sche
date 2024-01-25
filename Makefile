@@ -29,6 +29,6 @@ test: clean $(EXECUTABLE)
 	./$(EXECUTABLE) -t
 
 valgrind-test: clean $(EXECUTABLE)
-	valgrind -s --track-origins=yes ./scheme-exe -t
+	valgrind -s --track-origins=yes ./$(EXECUTABLE) -t
 
 .PHONY: all clean test valgrind-test
