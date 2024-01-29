@@ -19,9 +19,6 @@ all: $(EXECUTABLE)
 $(EXECUTABLE): $(OBJ_FILES)
 	$(COMPILER) $(CFLAGS) $^ -o $@
 
-%.o: %.c
-	$(COMPILER) $(CFLAGS) -c $< -o $@
-
 clean:
 	rm -f $(OBJ_FILES) $(EXECUTABLE)
 
