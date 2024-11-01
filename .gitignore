@@ -53,4 +53,5 @@ dkms.conf
 
 # Project specific
 scheme-exe
+test-exe
 vgcore.*

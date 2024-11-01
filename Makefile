@@ -5,27 +5,32 @@ COMPILER ?= clang
 CFLAGS = -Wall -Wextra -g
 
 # Source files
-SRC_FILES = main.c memory_tracker.c
+SRC_LIB_FILES = memory_tracker.c sche_lib.c
 
 # Object files
-OBJ_FILES = $(SRC_FILES:.c=.o)
+OBJ_LIB_FILES = $(SRC_LIB_FILES:.c=.o)
 
 # Output executable
 EXECUTABLE = scheme-exe
 
-# Targets
-all: $(EXECUTABLE)
+TEST_EXECUTABLE = test-exe
 
-$(EXECUTABLE): $(OBJ_FILES)
+# Targets
+all: $(EXECUTABLE) $(TEST_EXECUTABLE)
+
+$(EXECUTABLE): $(OBJ_LIB_FILES) main.o
+	$(COMPILER) $(CFLAGS) $^ -o $@
+
+$(TEST_EXECUTABLE): $(OBJ_LIB_FILES) test.o
 	$(COMPILER) $(CFLAGS) $^ -o $@
 
 clean:
-	rm -f $(OBJ_FILES) $(EXECUTABLE)
+	rm -f $(OBJ_FILES) $(EXECUTABLE) $(TEST_EXECUTABLE) main.o test.o
 
-test: clean $(EXECUTABLE)
-	./$(EXECUTABLE) -t
+test: clean $(TEST_EXECUTABLE)
+	./$(TEST_EXECUTABLE)
 
-valgrind-test: clean $(EXECUTABLE)
-	valgrind -s --track-origins=yes ./$(EXECUTABLE) -t
+valgrind-test: clean $(TEST_EXECUTABLE)
+	valgrind -s --track-origins=yes ./$(TEST_EXECUTABLE) -t
 
 .PHONY: all clean test valgrind-test
