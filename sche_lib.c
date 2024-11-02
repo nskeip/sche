@@ -27,12 +27,12 @@ TokenizerResult tokenize_with_allocator(const char *s, allocator alloc) {
   tofree = string = strdup(s);
   assert(tofree != NULL);
 
-  MemoryTracker *tmp_tokens = memory_tracker_init(4096);
+  const size_t max_tokens_n = strlen(s);
+  Token *tmp_tokens = calloc(max_tokens_n, sizeof(Token));
   while ((token = strsep(&string, " \t\r\n")) != NULL) { // code by words
     while (*token != '\0') {                             // word by characters
+      Token *new_token = tmp_tokens + result.token_list.tokens_n;
       ++result.token_list.tokens_n;
-      Token *new_token = memory_tracker_push(tmp_tokens, sizeof(Token));
-      assert(new_token != NULL);
       if (*token == '(' || *token == ')') {
         new_token->type =
             (*token == '(') ? TOKEN_TYPE_PAR_OPEN : TOKEN_TYPE_PAR_CLOSE;
@@ -73,11 +73,11 @@ TokenizerResult tokenize_with_allocator(const char *s, allocator alloc) {
     }
   }
   result.token_list.tokens = alloc(sizeof(Token) * result.token_list.tokens_n);
-  for (size_t i = 0; i < result.token_list.tokens_n; ++i) {
-    result.token_list.tokens[i] = *((Token *)tmp_tokens->pointers[i]);
-  }
+  memcpy(result.token_list.tokens,
+         tmp_tokens,
+         sizeof(Token) * result.token_list.tokens_n);
 cleanup:
-  memory_tracker_release(tmp_tokens);
+  free(tmp_tokens);
   free(tofree);
   return result;
 }
