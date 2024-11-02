@@ -17,8 +17,6 @@ static void my_release_all() { memory_tracker_release(mt); }
 #define ALLOCATOR memory_tracker_allocate
 #define DEALLOCATOR my_release_all
 
-typedef void *(*allocator)(size_t);
-
 TokenizerResult tokenize_with_allocator(const char *s, allocator alloc) {
   TokenizerResult result = {
       .status = TOKENIZER_SUCCESS,
