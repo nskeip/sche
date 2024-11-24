@@ -31,6 +31,6 @@ test: clean $(TEST_EXECUTABLE)
 	./$(TEST_EXECUTABLE)
 
 valgrind-test: clean $(TEST_EXECUTABLE)
-	valgrind -s --track-origins=yes ./$(TEST_EXECUTABLE) -t
+	valgrind -s --track-origins=yes ./$(TEST_EXECUTABLE)
 
 .PHONY: all clean test valgrind-test
