@@ -32,7 +32,7 @@ v0.2
 [x] ReWrite parser.
   [x] Make it more permissive to variable names - closer to racket.
   [x] Remove 0xdeadbeef and 0777.
-  [x] Remove memory_manager.
+  [x] Remove memory_tracker.
 
 TODO:
 
