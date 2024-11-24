@@ -28,10 +28,9 @@ TokenList tokenize(const char *);
 
 typedef struct ExpressionT {
   enum expression_type {
-    EXPR_TYPE_NAME,
-    EXPR_TYPE_INT,
-    EXPR_TYPE_EMPTY,
-    EXPR_TYPE_SUBEXPR,
+    EXPR_TYPE_NAME = 1,
+    EXPR_TYPE_INT = 2,
+    EXPR_TYPE_SUBEXPR = 3,
   } type;
   union {
     Value value;

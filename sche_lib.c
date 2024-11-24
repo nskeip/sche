@@ -96,10 +96,14 @@ TokenList tokenize(const char *input) {
 
           // curring to delimiter + doing some checks
           bool has_alphas = false;
+          bool has_digits = false;
           int dots_counter = 0;
           while (*end != '\0' && *end != '(' && *end != ')') {
             if (isalpha(*end)) {
               has_alphas = true;
+            }
+            if (isdigit(*end)) {
+              has_digits = true;
             }
             if (*end == '.') {
               dots_counter++;
@@ -109,7 +113,7 @@ TokenList tokenize(const char *input) {
 
           size_t length = end - start;
           char *symbol = strndup(start, length);
-          if (!has_alphas && dots_counter <= 1) {
+          if (has_digits && !has_alphas && dots_counter <= 1) {
             result.tokens[result.tokens_n++] =
                 create_number_token(atoi(symbol));
           } else {

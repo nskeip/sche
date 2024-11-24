@@ -39,7 +39,17 @@ int main(void) {
     token_list_free(&token_list);
   }
   {
-    Expression *expr = parse(tokenize("(+ 1 2)"));
+    TokenList token_list = tokenize("(+ 1 2)");
+    assert(token_list.tokens_n == 5);
+    assert(token_list.tokens[0].type == TOKEN_TYPE_PAR_OPEN);
+    assert(token_list.tokens[1].type == TOKEN_TYPE_SYMBOL);
+    assert(strncmp(token_list.tokens[1].value.s, "+", 1) == 0);
+    assert(token_list.tokens[2].type == TOKEN_TYPE_NUMBER);
+    assert(token_list.tokens[2].value.num == 1);
+    assert(token_list.tokens[3].type == TOKEN_TYPE_NUMBER);
+    assert(token_list.tokens[3].value.num == 2);
+    assert(token_list.tokens[4].type == TOKEN_TYPE_PAR_CLOSE);
+    Expression *expr = parse(token_list);
     assert(expr != NULL);
     assert(expr->type == EXPR_TYPE_SUBEXPR);
     assert(strncmp(expr->value.s, "+", 1) == 0);
