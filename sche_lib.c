@@ -34,7 +34,7 @@ Token create_par_close_token() {
 
 void token_free(Token *token) {
   if (token->type == TOKEN_TYPE_SYMBOL) {
-    free(token->value.s); // Free dynamically allocated string
+    free((char *)token->value.s); // Free dynamically allocated string
   }
 }
 
@@ -180,7 +180,7 @@ Expression *parse(TokenList token_list) {
       break;
     case TOKEN_TYPE_SYMBOL:
       current_expr->type = EXPR_TYPE_SUBEXPR;
-      current_expr->value.s = tokens[i].value.s;
+      current_expr->value.s = strdup(tokens[i].value.s);
       break;
     case TOKEN_TYPE_PAR_OPEN: {
       current_expr->type = EXPR_TYPE_SUBEXPR;
