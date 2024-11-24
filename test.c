@@ -64,6 +64,8 @@ int main(void) {
     /* EvalResult er = eval_expr_list(pr.expr); */
     /* assert(er.type == EVAL_SUCCESS); */
     /* assert(er.value.num == 3); */
+    expression_free(expr);
+    token_list_free(&token_list);
   }
   /*
   {

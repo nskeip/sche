@@ -148,6 +148,9 @@ void expression_free(Expression *expr) {
   if (expr->type == EXPR_TYPE_SUBEXPR) {
     expression_free(expr->subexpr);
   }
+  if (expr->type == EXPR_TYPE_NAME) {
+    free((char *)expr->value.s);
+  }
   if (expr->next != NULL) {
     expression_free(expr->next);
   }
@@ -170,6 +173,8 @@ Expression *parse(TokenList token_list) {
     return NULL;
   }
   Expression *const first_expr = malloc(sizeof(Expression));
+  first_expr->next = NULL;
+  first_expr->value.s = NULL;
   Expression *current_expr = first_expr;
   const size_t idx_of_closing_par = tokens_n - 1;
   for (size_t i = 1; i < idx_of_closing_par; ++i) {
@@ -179,7 +184,7 @@ Expression *parse(TokenList token_list) {
       current_expr->value.num = tokens[i].value.num;
       break;
     case TOKEN_TYPE_SYMBOL:
-      current_expr->type = EXPR_TYPE_SUBEXPR;
+      current_expr->type = EXPR_TYPE_NAME;
       current_expr->value.s = strdup(tokens[i].value.s);
       break;
     case TOKEN_TYPE_PAR_OPEN: {
