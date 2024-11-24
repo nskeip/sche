@@ -321,8 +321,9 @@ int eval_expr_list(const Expression *expr) {
     exit(4);
   }
 
-  for (int i = 0; i < args_n; ++i) {
-    const Expression *arg = exp_get_nth(expr, i + 1);
+  // 0 is the funciton, start from 1
+  for (int i = 1; i < args_n; ++i) {
+    const Expression *arg = exp_get_nth(expr, i);
     if (arg->type == EXPR_TYPE_INT) {
       args[i] = arg->value.num;
     } else if (arg->type == EXPR_TYPE_SUBEXPR) {
