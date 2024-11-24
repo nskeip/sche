@@ -330,6 +330,7 @@ int eval_expr_list(const Expression *expr) {
       args[i] = subexpr_value;
     } else {
       perror("Invalid argument type");
+      exit(5);
     }
   }
   int result = f->run(args_n, args);
