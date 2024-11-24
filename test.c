@@ -1,6 +1,7 @@
 #include "sche_lib.h"
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 int main(void) {
@@ -51,7 +52,7 @@ int main(void) {
     assert(token_list.tokens[4].type == TOKEN_TYPE_PAR_CLOSE);
     Expression *expr = parse(token_list);
     assert(expr != NULL);
-    assert(expr->type == EXPR_TYPE_SUBEXPR);
+    assert(expr->type == EXPR_TYPE_NAME);
     assert(strncmp(expr->value.s, "+", 1) == 0);
 
     assert(expr->next->type == EXPR_TYPE_INT);
@@ -61,57 +62,16 @@ int main(void) {
     assert(expr->next->next->value.num == 2);
     assert(expr->next->next->next == NULL);
 
-    /* EvalResult er = eval_expr_list(pr.expr); */
-    /* assert(er.type == EVAL_SUCCESS); */
-    /* assert(er.value.num == 3); */
+    assert(eval_expr_list(expr) == 3);
     expression_free(expr);
     token_list_free(&token_list);
   }
-  /*
   {
-    TokenizerResult tok_result = tokenize("(+ (- 5 4) 40 1)");
-    assert(tok_result.status == TOKENIZER_SUCCESS);
-    ParserResult pr =
-        parse(tok_result.token_list.tokens_n, tok_result.token_list.tokens);
-    assert(pr.type == PARSE_SUCCESS);
-    assert(pr.expr->type == EXPR_TYPE_SUBEXPR);
-    assert(*pr.expr->value.s == '+');
-
-    assert(pr.expr->next != NULL);
-    assert(pr.expr->next->type == EXPR_TYPE_SUBEXPR);
-    assert(pr.expr->next->subexpr != NULL);
-    assert(pr.expr->next->subexpr->type == EXPR_TYPE_SUBEXPR);
-    assert(*pr.expr->next->subexpr->value.s == '-');
-    assert(pr.expr->next->subexpr->next->value.num == 5);
-    assert(pr.expr->next->subexpr->next->next->value.num == 4);
-    assert(pr.expr->next->subexpr->next->next->next == NULL);
-
-    assert(pr.expr->next->next->type == EXPR_TYPE_INT);
-    assert(pr.expr->next->next->value.num == 40);
-    assert(pr.expr->next->next->next->type == EXPR_TYPE_INT);
-    assert(pr.expr->next->next->next->value.num == 1);
-    assert(pr.expr->next->next->next->next == NULL);
-
-    EvalResult er = eval_expr_list(pr.expr);
-    assert(er.type == EVAL_SUCCESS);
-    assert(er.value.num == 42);
-
-    // and nothing changed after evaluation
-    assert(pr.expr->next->type == EXPR_TYPE_SUBEXPR);
-    assert(pr.expr->next->subexpr != NULL);
-    assert(pr.expr->next->subexpr->type == EXPR_TYPE_SUBEXPR);
-    assert(*pr.expr->next->subexpr->value.s == '-');
-    assert(pr.expr->next->subexpr->next->value.num == 5);
-    assert(pr.expr->next->subexpr->next->next->value.num == 4);
-
-    assert(pr.expr->next->next->type == EXPR_TYPE_INT);
-    assert(pr.expr->next->next->value.num == 40);
-    assert(pr.expr->next->next->next->type == EXPR_TYPE_INT);
-    assert(pr.expr->next->next->next->value.num == 1);
+    assert(eval("(+ (- 5 4) 40 1)") == 42);
   }
-  */
   printf("\x1b[32m"); // green text
   printf("\u2713 ");  // Unicode check mark
   printf("\x1b[0m");  // Reset text color to default
   printf("All tests passed\n");
+  return EXIT_SUCCESS;
 }
