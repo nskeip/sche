@@ -220,3 +220,131 @@ Expression *parse(TokenList token_list) {
   }
   return first_expr;
 }
+
+static inline const Expression *exp_get_nth(const Expression *expr, size_t n) {
+  assert(expr != NULL);
+  while (0 < n--) {
+    expr = expr->next;
+  }
+  return expr;
+}
+
+static size_t exp_list_len(const Expression *expr) {
+  size_t len = 0;
+  while (expr != NULL) {
+    ++len;
+    expr = expr->next;
+  }
+  return len;
+}
+
+static long f_add(size_t args_n, const long *args) {
+  long sum = 0;
+  for (size_t i = 0; i < args_n; ++i) {
+    sum += args[i];
+  }
+  return sum;
+}
+
+static long f_sub(size_t args_n, const long *args) {
+  (void)(args_n);
+  return args[0] - args[1];
+}
+
+static long f_mul(size_t args_n, const long *args) {
+  long product = 1;
+  for (size_t i = 0; i < args_n; ++i) {
+    product *= args[i];
+  }
+  return product;
+}
+
+static long f_div(size_t args_n, const long *args) {
+  (void)(args_n);
+  if (args[1] == 0) {
+    fprintf(stderr, "Division by zero\n");
+    assert(false);
+  }
+  return args[0] / args[1];
+}
+
+static long f_rem(size_t args_n, const long *args) {
+  (void)(args_n);
+  if (args[1] == 0) {
+    fprintf(stderr, "Division by zero\n");
+    assert(false);
+  }
+  return args[0] % args[1];
+}
+
+static const Function functions[] = {
+    {.name = "+", .min_args_n = 2, .max_args_n = -1, .run = f_add},
+    {.name = "-", .min_args_n = 2, .max_args_n = 2,  .run = f_sub},
+    {.name = "*", .min_args_n = 2, .max_args_n = -1, .run = f_mul},
+    {.name = "/", .min_args_n = 2, .max_args_n = 2,  .run = f_div},
+    {.name = "%", .min_args_n = 2, .max_args_n = 2,  .run = f_rem},
+};
+
+int eval_expr_list(const Expression *expr) {
+  {
+    bool expression_begins_with_name = expr->type == EXPR_TYPE_NAME;
+    if (!expression_begins_with_name) {
+      perror("Expression must begin with a name");
+      exit(1);
+    }
+  }
+
+  const char *name = expr->value.s;
+  const Function *f = NULL;
+  for (size_t i = 0; i < sizeof(functions) / sizeof(functions[0]); ++i) {
+    if (strcmp(name, functions[i].name) == 0) {
+      f = &functions[i];
+      break;
+    }
+  }
+
+  if (f == NULL) {
+    perror("Unknown function");
+    exit(2);
+  }
+
+  const int args_n = exp_list_len(expr) - 1;
+  if (args_n < 0 || args_n < f->min_args_n ||
+      (f->max_args_n != -1 && args_n > f->max_args_n)) {
+    fprintf(stderr, "Wrong number of arguments for function %s\n", name);
+    exit(3);
+  }
+
+  long *args = malloc(sizeof(long) * args_n);
+  if (args == NULL) {
+    perror("malloc");
+    exit(4);
+  }
+
+  for (int i = 0; i < args_n; ++i) {
+    const Expression *arg = exp_get_nth(expr, i + 1);
+    if (arg->type == EXPR_TYPE_INT) {
+      args[i] = arg->value.num;
+    } else if (arg->type == EXPR_TYPE_SUBEXPR) {
+      int subexpr_value = eval_expr_list(arg->subexpr);
+      args[i] = subexpr_value;
+    } else {
+      perror("Invalid argument type");
+    }
+  }
+  int result = f->run(args_n, args);
+  free(args);
+  return result;
+}
+
+int eval(const char *s) {
+  TokenList tokens = tokenize(s);
+
+  Expression *expr = parse(tokens);
+  token_list_free(&tokens);
+
+  int result = eval_expr_list(expr);
+  expression_free(expr);
+
+  return result;
+}
