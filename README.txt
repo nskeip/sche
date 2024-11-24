@@ -36,6 +36,9 @@ v0.2
 
 TODO:
 
+[ ] if
+[ ] or, and
+[ ] lists
 [ ] Running code from a file.
 [ ] User defined functions.
 [ ] Useful data types:
