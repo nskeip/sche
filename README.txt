@@ -17,7 +17,29 @@ __   __   _        _                _   _
 |___|_| |_|\__\___|_|  | .__/|_|  \___|\__\___|_|   
                        |_|                          
 
+
 Roadmap:
+
+[ ] if
+[ ] or, and
+[ ] lists
+[ ] Running code from a file.
+[ ] Pretty-printing for debug.
+[ ] User defined functions.
+[ ] Useful data types:
+  [ ] Strings support.
+  [ ] Real numbers support.
+  [ ] Big numbers support.
+
+
+Releases history:
+
+v0.2
+[x] ReWrite parser.
+  [x] Make it more permissive to variable names - closer to racket.
+  [x] Remove 0xdeadbeef and 0777.
+  [x] Remove memory_tracker.
+
 
 v0.1
 [x] Write a simple parser (without nesting).
@@ -27,21 +49,3 @@ v0.1
 [x] Add 0xdeadbeef and 0777 :)
 [x] Add nesting to the parser.
 [x] Add n-variable functions.
-
-v0.2
-[x] ReWrite parser.
-  [x] Make it more permissive to variable names - closer to racket.
-  [x] Remove 0xdeadbeef and 0777.
-  [x] Remove memory_tracker.
-
-TODO:
-
-[ ] if
-[ ] or, and
-[ ] lists
-[ ] Running code from a file.
-[ ] User defined functions.
-[ ] Useful data types:
-  [ ] Strings support.
-  [ ] Real numbers support.
-  [ ] Big numbers support.
