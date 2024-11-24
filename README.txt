@@ -29,14 +29,16 @@ v0.1
 [x] Add n-variable functions.
 
 v0.2
-[ ] Write a simple parser (without nesting).
-[ ] Make a usable calculator.
-[ ] Add 0xdeadbeef and 0777 :)
-[ ] Add nesting to the parser.
-[ ] Add n-variable functions.
+[x] ReWrite parser.
+  [x] Make it more permissive to variable names - closer to racket.
+  [x] Remove 0xdeadbeef and 0777.
+  [x] Remove memory_manager.
+
+TODO:
+
 [ ] Running code from a file.
 [ ] User defined functions.
 [ ] Useful data types:
+  [ ] Strings support.
   [ ] Real numbers support.
   [ ] Big numbers support.
-[ ] ...
