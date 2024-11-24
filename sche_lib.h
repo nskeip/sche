@@ -2,6 +2,12 @@
 #define _SCHE_LIB_H
 
 #include <stddef.h>
+
+typedef union {
+  const char *s;
+  long num;
+} Value;
+
 typedef struct {
   enum TokenType {
     TOKEN_TYPE_SYMBOL = 0,
@@ -9,10 +15,7 @@ typedef struct {
     TOKEN_TYPE_PAR_OPEN = 2,
     TOKEN_TYPE_PAR_CLOSE = 3,
   } type;
-  union {
-    char *s;
-    int num;
-  } value;
+  Value value;
 } Token;
 
 typedef struct {
@@ -23,15 +26,21 @@ typedef struct {
 void token_list_free(TokenList *);
 TokenList tokenize(const char *);
 
-typedef struct Expression {
+typedef struct ExpressionT {
   enum expression_type {
     EXPR_TYPE_NAME,
     EXPR_TYPE_INT,
+    EXPR_TYPE_EMPTY,
     EXPR_TYPE_SUBEXPR,
   } type;
   union {
-    struct Expression *subexpr;
+    Value value;
+    struct ExpressionT *subexpr;
   };
-  struct expression *next;
-} expression_t;
+  struct ExpressionT *next;
+} Expression;
+
+void expression_free(Expression *);
+
+Expression *parse(TokenList);
 #endif // !_SCHE_LIB_H

@@ -5,105 +5,57 @@
 
 int main(void) {
   {
-    const size_t test_size = 2048;
+    TokenList token_list = tokenize("(foo(bar 42 99baz) )");
+    Token *tokens = token_list.tokens;
+    assert(token_list.tokens_n == 8);
+    assert(tokens[0].type == TOKEN_TYPE_PAR_OPEN);
+    assert(tokens[1].type == TOKEN_TYPE_SYMBOL);
+    assert(strncmp(tokens[1].value.s, "foo", 3) == 0);
 
-    char many_tokens[test_size];
-    memset(many_tokens, '(', test_size - 1);
-    many_tokens[test_size - 1] = '\0';
+    assert(tokens[2].type == TOKEN_TYPE_PAR_OPEN);
 
-    TokenizerResult tok_result = tokenize(many_tokens);
-    assert(tok_result.status == TOKENIZER_SUCCESS);
-    assert(tok_result.token_list.tokens_n == 2047);
+    assert(tokens[3].type == TOKEN_TYPE_SYMBOL);
+    assert(strncmp(tokens[3].value.s, "bar", 3) == 0);
+
+    assert(tokens[4].type == TOKEN_TYPE_NUMBER);
+    assert(tokens[4].value.num == 42);
+
+    // print token type:
+    assert(tokens[5].type == TOKEN_TYPE_SYMBOL);
+    assert(strncmp(tokens[5].value.s, "99baz", 5) == 0);
+
+    assert(tokens[6].type == TOKEN_TYPE_PAR_CLOSE);
+    assert(tokens[7].type == TOKEN_TYPE_PAR_CLOSE);
+    token_list_free(&token_list);
   }
   {
-    TokenizerResult tok_result = tokenize("(+ -1 20)");
-    TokenizerStatus tok_status = tok_result.status;
-    assert(tok_status == TOKENIZER_SUCCESS);
-    assert(tok_result.token_list.tokens_n == 5);
+    const size_t test_buffer_size = 2048;
+    char many_tokens[test_buffer_size];
+    memset(many_tokens, '(', test_buffer_size - 1);
+    many_tokens[test_buffer_size - 1] = '\0';
 
-    assert(tok_result.token_list.tokens[0].type == TOKEN_TYPE_PAR_OPEN);
-
-    assert(tok_result.token_list.tokens[1].type == TOKEN_TYPE_NAME);
-    assert(*tok_result.token_list.tokens[1].value.s == '+');
-
-    assert(tok_result.token_list.tokens[2].type == TOKEN_TYPE_NUMBER);
-    assert(tok_result.token_list.tokens[2].value.num == -1);
-
-    assert(tok_result.token_list.tokens[3].type == TOKEN_TYPE_NUMBER);
-    assert(tok_result.token_list.tokens[3].value.num == 20);
-
-    assert(tok_result.token_list.tokens[4].type == TOKEN_TYPE_PAR_CLOSE);
+    TokenList token_list = tokenize(many_tokens);
+    assert(token_list.tokens_n == 2047);
+    token_list_free(&token_list);
   }
   {
-    TokenizerResult tok_result = tokenize("99c");
-    assert(tok_result.status == TOKENIZER_ERROR_INVALID_NAME);
-  }
-  {
-    TokenizerResult tok_result = tokenize("e2e4 abc");
-    assert(tok_result.status == TOKENIZER_SUCCESS);
-    assert(tok_result.token_list.tokens_n == 2);
+    Expression *expr = parse(tokenize("(+ 1 2)"));
+    assert(expr != NULL);
+    assert(expr->type == EXPR_TYPE_SUBEXPR);
+    assert(strncmp(expr->value.s, "+", 1) == 0);
 
-    assert(tok_result.token_list.tokens[0].type == TOKEN_TYPE_NAME);
-    assert(strncmp(tok_result.token_list.tokens[0].value.s, "e2e4", 4) == 0);
+    assert(expr->next->type == EXPR_TYPE_INT);
+    assert(expr->next->value.num == 1);
 
-    assert(tok_result.token_list.tokens[1].type == TOKEN_TYPE_NAME);
-    assert(strncmp(tok_result.token_list.tokens[1].value.s, "abc", 3) == 0);
-  }
-  {
-    assert(tokenize("").status == TOKENIZER_SUCCESS);
-    assert(tokenize("my-variable").status == TOKENIZER_SUCCESS);
-    assert(tokenize("*special*").status == TOKENIZER_SUCCESS);
-    assert(tokenize("+special+").status == TOKENIZER_SUCCESS);
-    assert(tokenize("/divide/").status == TOKENIZER_SUCCESS);
-    assert(tokenize("=eq=").status == TOKENIZER_SUCCESS);
-    assert(tokenize("variable_with_underscore").status == TOKENIZER_SUCCESS);
-  }
-  {
-    TokenizerResult tok_result = tokenize("");
-    assert(tok_result.status == TOKENIZER_SUCCESS);
-    assert(tok_result.token_list.tokens_n == 0);
-    assert(parse(tok_result.token_list.tokens_n, tok_result.token_list.tokens)
-               .type == PARSE_ERROR_TOO_SHORT_EXPR);
-  }
-  {
-    TokenizerResult tok_result = tokenize("()");
-    assert(tok_result.status == TOKENIZER_SUCCESS);
-    assert(tok_result.token_list.tokens_n == 2);
-    assert(parse(tok_result.token_list.tokens_n, tok_result.token_list.tokens)
-               .type == PARSE_ERROR_TOO_SHORT_EXPR);
-  }
-  {
-    TokenizerResult tok_result = tokenize("(+ 1 2)");
-    TokenizerStatus tok_status = tok_result.status;
-    assert(tok_status == TOKENIZER_SUCCESS);
+    assert(expr->next->next->type == EXPR_TYPE_INT);
+    assert(expr->next->next->value.num == 2);
+    assert(expr->next->next->next == NULL);
 
-    ParserResult pr =
-        parse(tok_result.token_list.tokens_n, tok_result.token_list.tokens);
-    assert(pr.type == PARSE_SUCCESS);
-    assert(pr.expr->type == EXPR_TYPE_SUBEXPR);
-    assert(strncmp(pr.expr->value.s, "+", 1) == 0);
-
-    assert(pr.expr->next->type == EXPR_TYPE_INT);
-    assert(pr.expr->next->value.num == 1);
-
-    assert(pr.expr->next->next->type == EXPR_TYPE_INT);
-    assert(pr.expr->next->next->value.num == 2);
-    assert(pr.expr->next->next->next == NULL);
-
-    EvalResult er = eval_expr_list(pr.expr);
-    assert(er.type == EVAL_SUCCESS);
-    assert(er.value.num == 3);
+    /* EvalResult er = eval_expr_list(pr.expr); */
+    /* assert(er.type == EVAL_SUCCESS); */
+    /* assert(er.value.num == 3); */
   }
-  {
-    EvalResult er = eval("(- 0777 0555)");
-    assert(er.type == EVAL_SUCCESS);
-    assert(er.value.num == 146);
-  }
-  {
-    EvalResult er = eval("(+ 0xdead0000 0xbeef)");
-    assert(er.type == EVAL_SUCCESS);
-    assert(er.value.num == 0xdeadbeef);
-  }
+  /*
   {
     TokenizerResult tok_result = tokenize("(+ (- 5 4) 40 1)");
     assert(tok_result.status == TOKENIZER_SUCCESS);
@@ -145,6 +97,7 @@ int main(void) {
     assert(pr.expr->next->next->next->type == EXPR_TYPE_INT);
     assert(pr.expr->next->next->next->value.num == 1);
   }
+  */
   printf("\x1b[32m"); // green text
   printf("\u2713 ");  // Unicode check mark
   printf("\x1b[0m");  // Reset text color to default

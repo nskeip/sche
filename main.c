@@ -38,34 +38,6 @@ int main(int argc, char **argv) {
       puts("Too many arguments");
       goto error_and_clean_up;
     }
-    EvalResult eval_result = eval(argv[2]);
-    switch (eval_result.type) {
-    case EVAL_SUCCESS: {
-      printf("%ld\n", eval_result.value.num);
-      goto success_and_clean_up;
-    }
-    case EVAL_ERROR_TOKENIZATION:
-      puts("Error tokenizing expression");
-      break;
-    case EVAL_ERROR_PARSING:
-      puts("Error parsing expression");
-      break;
-    case EVAL_ERROR_NAME_EXPECTED:
-      puts("Named expression expected");
-      break;
-    case EVAL_ERROR_WRONG_ARGS_N:
-      puts("Wrong number of arguments (you probably noticed, don't you?)");
-      break;
-    case EVAL_ERROR_MEMORY_ALLOC:
-      puts("Memory allocation error during evaluation");
-      break;
-    case EVAL_ERROR_NAME_OR_SUBEXPR_EXPECTED:
-      puts("Integer or subexpression expected");
-      break;
-    case EVAL_ERROR_UNDEFINED_FUNCTION:
-      puts("Error evaluating expression");
-      break;
-    }
     goto error_and_clean_up;
   }
 success_and_clean_up:

@@ -137,18 +137,35 @@ TokenList tokenize(const char *input) {
   return result;
 }
 
-/*
-ParserResult parse_with_allocator(size_t tokens_n, const Token tokens[],
-                                  allocator alloc)
-{
-  if (tokens_n > 0 && (tokens[0].type != TOKEN_TYPE_PAR_OPEN ||
-                       tokens[tokens_n - 1].type != TOKEN_TYPE_PAR_CLOSE)) {
-    return (ParserResult){.type = PARSE_ERROR_UNBALANCED_PAR, .expr = NULL};
+void expression_free(Expression *expr) {
+  if (expr == NULL) {
+    return;
+  }
+  if (expr->type == EXPR_TYPE_SUBEXPR) {
+    expression_free(expr->subexpr);
+  }
+  if (expr->next != NULL) {
+    expression_free(expr->next);
+  }
+  free(expr);
+}
+
+Expression *parse(TokenList token_list) {
+  const size_t tokens_n = token_list.tokens_n;
+  if (tokens_n == 0) {
+    return NULL;
+  }
+  const Token *tokens = token_list.tokens;
+  if (tokens_n != 0 && (tokens[0].type != TOKEN_TYPE_PAR_OPEN ||
+                        tokens[tokens_n - 1].type != TOKEN_TYPE_PAR_CLOSE)) {
+    perror("Unbalanced parenthesis");
+    return NULL;
   }
   if (tokens_n < 3) {
-    return (ParserResult){.type = PARSE_ERROR_TOO_SHORT_EXPR, .expr = NULL};
+    perror("Not enough tokens");
+    return NULL;
   }
-  Expression *const first_expr = alloc(sizeof(Expression));
+  Expression *const first_expr = malloc(sizeof(Expression));
   Expression *current_expr = first_expr;
   const size_t idx_of_closing_par = tokens_n - 1;
   for (size_t i = 1; i < idx_of_closing_par; ++i) {
@@ -157,7 +174,7 @@ ParserResult parse_with_allocator(size_t tokens_n, const Token tokens[],
       current_expr->type = EXPR_TYPE_INT;
       current_expr->value.num = tokens[i].value.num;
       break;
-    case TOKEN_TYPE_NAME:
+    case TOKEN_TYPE_SYMBOL:
       current_expr->type = EXPR_TYPE_SUBEXPR;
       current_expr->value.s = tokens[i].value.s;
       break;
@@ -176,12 +193,8 @@ ParserResult parse_with_allocator(size_t tokens_n, const Token tokens[],
           ++subexpr_tokens_n;
         }
       }
-      ParserResult subexpr_parse_result =
-          parse_with_allocator(subexpr_tokens_n, tokens + i, alloc);
-      if (subexpr_parse_result.type != PARSE_SUCCESS) {
-        return (ParserResult){.type = subexpr_parse_result.type, .expr = NULL};
-      }
-      current_expr->subexpr = subexpr_parse_result.expr;
+      current_expr->subexpr = parse(
+          (TokenList){.tokens_n = subexpr_tokens_n, .tokens = tokens + i});
       i += subexpr_tokens_n - 1;
       break;
     }
@@ -191,10 +204,10 @@ ParserResult parse_with_allocator(size_t tokens_n, const Token tokens[],
 
     const bool we_have_some_tokens_left = i != idx_of_closing_par - 1;
     if (we_have_some_tokens_left) {
-      current_expr->next = alloc(sizeof(Expression));
+      current_expr->next = malloc(sizeof(Expression));
       current_expr = current_expr->next;
       current_expr->next = NULL;
     }
   }
-  return (ParserResult){.type = PARSE_SUCCESS, .expr = first_expr};
-} */
+  return first_expr;
+}
