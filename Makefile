@@ -5,7 +5,7 @@ COMPILER ?= clang
 CFLAGS = -Wall -Wextra -g
 
 # Source files
-SRC_LIB_FILES = memory_tracker.c sche_lib.c
+SRC_LIB_FILES = sche_lib.c
 
 # Object files
 OBJ_LIB_FILES = $(SRC_LIB_FILES:.c=.o)
