@@ -20,6 +20,7 @@ __   __   _        _                _   _
 
 Roadmap:
 
+[x] All functions are of n variables.
 [ ] if
 [ ] or, and
 [ ] lists

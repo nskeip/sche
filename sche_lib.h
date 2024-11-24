@@ -45,9 +45,7 @@ Expression *parse(TokenList);
 
 typedef struct {
   const char *name;
-  const int min_args_n;
-  const int max_args_n;
-  long (*const run)(size_t args_n, const long *args);
+  long (*const run)(int, int);
 } Function;
 
 int eval_expr_list(const Expression *); // TODO: rename to eval_expr

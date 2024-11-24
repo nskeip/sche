@@ -68,6 +68,9 @@ int main(void) {
   }
   {
     assert(eval("(+ (- 5 4) 40 1)") == 42);
+    assert(eval("(* 2 3 4)") == 24);
+    assert(eval("(- 10 5 4)") == 1);
+    assert(eval("(/ 120 2 3)") == 20);
   }
   printf("\x1b[32m"); // green text
   printf("\u2713 ");  // Unicode check mark

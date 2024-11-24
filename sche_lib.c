@@ -238,52 +238,33 @@ static size_t exp_list_len(const Expression *expr) {
   return len;
 }
 
-static long f_add(size_t args_n, const long *args) {
-  long sum = 0;
-  for (size_t i = 0; i < args_n; ++i) {
-    sum += args[i];
-  }
-  return sum;
-}
+#define MAKE_BINARY_OP(op_name, op_sign)                                       \
+  static long op_name(int a, int b) { return a op_sign b; }
 
-static long f_sub(size_t args_n, const long *args) {
-  (void)(args_n);
-  return args[0] - args[1];
-}
-
-static long f_mul(size_t args_n, const long *args) {
-  long product = 1;
-  for (size_t i = 0; i < args_n; ++i) {
-    product *= args[i];
-  }
-  return product;
-}
-
-static long f_div(size_t args_n, const long *args) {
-  (void)(args_n);
-  if (args[1] == 0) {
-    fprintf(stderr, "Division by zero\n");
-    assert(false);
-  }
-  return args[0] / args[1];
-}
-
-static long f_rem(size_t args_n, const long *args) {
-  (void)(args_n);
-  if (args[1] == 0) {
-    fprintf(stderr, "Division by zero\n");
-    assert(false);
-  }
-  return args[0] % args[1];
-}
+MAKE_BINARY_OP(f_add, +)
+MAKE_BINARY_OP(f_sub, -)
+MAKE_BINARY_OP(f_mul, *)
+MAKE_BINARY_OP(f_div, /)
+MAKE_BINARY_OP(f_rem, %)
 
 static const Function functions[] = {
-    {.name = "+", .min_args_n = 2, .max_args_n = -1, .run = f_add},
-    {.name = "-", .min_args_n = 2, .max_args_n = 2,  .run = f_sub},
-    {.name = "*", .min_args_n = 2, .max_args_n = -1, .run = f_mul},
-    {.name = "/", .min_args_n = 2, .max_args_n = 2,  .run = f_div},
-    {.name = "%", .min_args_n = 2, .max_args_n = 2,  .run = f_rem},
+    {.name = "+", .run = f_add},
+    {.name = "-", .run = f_sub},
+    {.name = "*", .run = f_mul},
+    {.name = "/", .run = f_div},
+    {.name = "%", .run = f_rem},
 };
+
+static int exp_get_nth_numeric_value(const Expression *expr, size_t n) {
+  const Expression *nested_expr = exp_get_nth(expr, n);
+  if (nested_expr->type == EXPR_TYPE_INT) {
+    return nested_expr->value.num;
+  } else if (nested_expr->type == EXPR_TYPE_SUBEXPR) {
+    return eval_expr_list(nested_expr->subexpr);
+  }
+  perror("Invalid argument type");
+  exit(4);
+}
 
 int eval_expr_list(const Expression *expr) {
   {
@@ -309,34 +290,19 @@ int eval_expr_list(const Expression *expr) {
   }
 
   const int args_n = exp_list_len(expr) - 1;
-  if (args_n < 0 || args_n < f->min_args_n ||
-      (f->max_args_n != -1 && args_n > f->max_args_n)) {
+  if (args_n < 2) {
     fprintf(stderr, "Wrong number of arguments for function %s\n", name);
     exit(3);
   }
 
-  long *args = malloc(sizeof(long) * args_n);
-  if (args == NULL) {
-    perror("malloc");
-    exit(4);
-  }
-
+  // foldl'
   // 0 is the funciton, start from 1
-  for (int i = 1; i < args_n; ++i) {
-    const Expression *arg = exp_get_nth(expr, i);
-    if (arg->type == EXPR_TYPE_INT) {
-      args[i] = arg->value.num;
-    } else if (arg->type == EXPR_TYPE_SUBEXPR) {
-      int subexpr_value = eval_expr_list(arg->subexpr);
-      args[i] = subexpr_value;
-    } else {
-      perror("Invalid argument type");
-      exit(5);
-    }
+  int acc = exp_get_nth_numeric_value(expr, 1);
+  for (int i = 2; i <= args_n; ++i) {
+    int new_arg = exp_get_nth_numeric_value(expr, i);
+    acc = f->run(acc, new_arg);
   }
-  int result = f->run(args_n, args);
-  free(args);
-  return result;
+  return acc;
 }
 
 int eval(const char *s) {
