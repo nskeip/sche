@@ -50,6 +50,6 @@ typedef struct {
   long (*const run)(size_t args_n, const long *args);
 } Function;
 
-int eval_expr_list(const Expression *);
+int eval_expr_list(const Expression *); // TODO: rename to eval_expr
 int eval(const char *);
 #endif // !_SCHE_LIB_H
