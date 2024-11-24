@@ -32,17 +32,11 @@ int main(int argc, char **argv) {
   if (strcmp(argv[1], "-c") == 0) {
     if (argc < 3) {
       puts("No expression provided");
-      goto error_and_clean_up;
     }
     if (argc > 3) {
       puts("Too many arguments");
-      goto error_and_clean_up;
     }
-    goto error_and_clean_up;
+    printf("%d\n", eval(argv[2]));
   }
-success_and_clean_up:
   return EXIT_SUCCESS;
-
-error_and_clean_up:
-  return EXIT_FAILURE;
 }
